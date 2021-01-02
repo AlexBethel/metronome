@@ -74,4 +74,9 @@ impl BeatSpec {
             tempo: 60.0,
         }
     }
+
+    // Plays a single measure with this BeatSpec.
+    pub fn play_measure(&self) {
+        // TODO: Implement.
+    }
 }
