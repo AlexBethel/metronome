@@ -1,4 +1,5 @@
 # metronome
+
 A metronome controlled by the command line, motivated primarily as an
 exercise for learning the Rust programming language. As such, I've
 prioritized clean, simple and idiomatic code above advanced and
