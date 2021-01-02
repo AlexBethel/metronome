@@ -1,4 +1,5 @@
-// Main program entry point for the program.
+// Command-line option parsing, and translation to the more useful
+// Config data structure.
 // Copyright (c) 2020 by Alexander Bethel.
 
 // This file is part of Metronome.
@@ -16,9 +17,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
-pub mod config;
-pub mod beat_spec;
+use crate::beat_spec::BeatSpec;
 
-fn main() {
-    println!("Hello, world!");
+// Summary of the user's desired configuration for the program.
+struct Config {
+    // The tempo at which the metronome clicks, in beats per minute.
+    tempo: f64,
+
+    // Specification of the rhythm to beat.
+    rhythm: BeatSpec,
 }
