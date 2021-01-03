@@ -20,29 +20,22 @@
 // single measure.
 #[derive(Debug)]
 pub struct BeatSpec {
-    // The set of events to run, and where in the measure each event
-    // happens. (Should be sorted by time.)
-    events: Vec<TimedEvent>,
+    // The set of events to run during each tick in a measure.
+    ticks: Vec<Event>,
 
-    // Length of a measure, in beats.
-    measure_len: f64,
+    // Length of a beat, in ticks.
+    beat_len: u32,
 
     // Tempo, in beats per minute.
     tempo: f64,
 }
 
-// An event and the time at which it happens.
-#[derive(Debug)]
-struct TimedEvent {
-    // Time measured in beats.
-    time: f64,
-
-    event: Event,
-}
-
 // Different types of events that can occur in a measure.
 #[derive(Debug)]
 enum Event {
+    // Do nothing during this tick.
+    Rest,
+
     // Default metronome sound; the u32 is the emphasis level of the
     // beat.
     Beep(u32),
@@ -60,25 +53,11 @@ impl BeatSpec {
     // Creates a BeatSpec given a set of simultaneous cross-rhythms,
     // specified in order of decreasing emphasis.
     pub fn from_crossbeats(tempo: f64, beats: &[u32]) -> BeatSpec {
-        // Need at least one cross-rhythm for this constructor to be
-        // meaningful at all.
-        let beats_default = vec![1];
-        let beats = if beats.len() == 0 {
-            &beats_default
-        } else {
-            beats
-        };
-
-        let mut evts = vec![];
-        for i in 0..beats.len() {
-            push_beeps(&mut evts, beats[i] as f64 / beats[0] as f64,
-                       beats[i], (i + 1) as u32);
-        }
-
+        // TODO: Implement.
         BeatSpec {
-            events: evts,
-            measure_len: beats[0] as f64,
-            tempo: tempo / beats[0] as f64,
+            ticks: vec![],
+            beat_len: 1,
+            tempo: 60.0,
         }
     }
 
@@ -86,8 +65,8 @@ impl BeatSpec {
     pub fn from_rhythmspec(_tempo: f64, _spec: &str) -> BeatSpec {
         // TODO: Implement.
         BeatSpec {
-            events: vec![],
-            measure_len: 1.0,
+            ticks: vec![],
+            beat_len: 1,
             tempo: 60.0,
         }
     }
@@ -95,19 +74,6 @@ impl BeatSpec {
     // Plays a single measure with this BeatSpec.
     pub fn play_measure(&self) {
         // TODO: Implement.
-    }
-}
-
-// Pushes a set of `n_beats' evenly-spaced beeps (separated by `delay'
-// beats) to the list of metronome events.
-fn push_beeps(evts: &mut Vec<TimedEvent>, delay: f64, n_beats: u32,
-              emph: u32) {
-    for n in 0..n_beats {
-        let time = n as f64 * delay;
-        evts.push(TimedEvent {
-            time,
-            event: Event::Beep(emph),
-        });
     }
 }
 
@@ -119,8 +85,8 @@ mod tests {
     fn subdiv_test() {
         let bs = BeatSpec::from_subdiv(60.0, 3, 2);
 
-        assert_eq!(bs.events.len(), 6);
-        assert_eq!(bs.measure_len, 3.0);
+        assert_eq!(bs.ticks.len(), 6);
+        assert_eq!(bs.beat_len, 2);
         assert_eq!(bs.tempo, 60.0);
     }
 
@@ -128,8 +94,8 @@ mod tests {
     fn crossbeat_test() {
         let bs = BeatSpec::from_crossbeats(60.0, &vec![3, 6]);
 
-        assert_eq!(bs.events.len(), 6);
-        assert_eq!(bs.measure_len, 3.0);
+        assert_eq!(bs.ticks.len(), 6);
+        assert_eq!(bs.beat_len, 2);
         assert_eq!(bs.tempo, 60.0);
     }
 
@@ -137,8 +103,8 @@ mod tests {
     fn rspec_test() {
         let bs = BeatSpec::from_rhythmspec(60.0, "02!1212");
 
-        assert_eq!(bs.events.len(), 6);
-        assert_eq!(bs.measure_len, 3.0);
+        assert_eq!(bs.ticks.len(), 6);
+        assert_eq!(bs.beat_len, 2);
         assert_eq!(bs.tempo, 60.0);
     }
 }
