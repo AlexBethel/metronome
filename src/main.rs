@@ -1,5 +1,5 @@
 // Main program entry point for the program.
-// Copyright (c) 2020 by Alexander Bethel.
+// Copyright (c) 2021 by Alexander Bethel.
 
 // This file is part of Metronome.
 

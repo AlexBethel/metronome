@@ -1,6 +1,6 @@
 // Command-line option parsing, and translation to the more useful
 // Config data structure.
-// Copyright (c) 2020 by Alexander Bethel.
+// Copyright (c) 2021 by Alexander Bethel.
 
 // This file is part of Metronome.
 
