@@ -3,7 +3,8 @@
 A metronome controlled by the command line, motivated primarily as an
 exercise for learning the Rust programming language. As such, I've
 prioritized clean, simple and idiomatic code above advanced and
-diverse features.
+diverse features. Admittedly, I've only been coding in Rust for about
+a week, so I won't pretend I've done a spectacular job of that.
 
 ## Invocation
 
