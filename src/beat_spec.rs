@@ -16,6 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
+use error_chain::{ bail, error_chain };
+
+mod errors {
+    use super::*;
+    error_chain! {}
+}
+pub use errors::*;
+
 // Description of precisely what events should occur and when during a
 // single measure.
 #[derive(Debug)]
@@ -85,7 +93,7 @@ impl BeatSpec {
 
     // Creates a BeatSpec from a rhythm specification string.
     pub fn from_rhythmspec(tempo: f64, spec: &str)
-                           -> Result<BeatSpec, String> {
+                           -> Result<BeatSpec> {
         let mut ticks = vec![];
         let mut beat_len = 1;
 
@@ -102,8 +110,8 @@ impl BeatSpec {
                     beat_len = n;
                 },
                 _ => {
-                    return Err(String::from("Unknown rhythm spec command ")
-                               + &String::from(c));
+                    bail!(String::from("Unknown rhythm spec command ")
+                          + &String::from(c));
                 }
             }
             n += 1;
