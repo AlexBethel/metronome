@@ -52,12 +52,34 @@ impl BeatSpec {
 
     // Creates a BeatSpec given a set of simultaneous cross-rhythms,
     // specified in order of decreasing emphasis.
-    pub fn from_crossbeats(tempo: f64, beats: &[u32]) -> BeatSpec {
-        // TODO: Implement.
+    pub fn from_crossbeats(tempo: f64, beats_: &[u32]) -> BeatSpec {
+        // Add an implicit crossbeat of 1, so we get a high-pitched
+        // beep at the start of each measure.
+        let mut beats = vec![1];
+        beats.extend_from_slice(beats_);
+
+        let n_ticks = lcm(&beats);
+        let mut ticks = vec![];
+        for tick in 0..n_ticks {
+            let mut ev = Event::Rest;
+            let mut n = 0;
+            for beat in &beats {
+                assert_eq!(n_ticks % beat, 0);
+                if tick % (n_ticks / beat) == 0 {
+                    ev = Event::Beep(n);
+                    break;
+                }
+                // FIXME: Is there a more idiomatic way to do this?
+                n += 1;
+            }
+
+            ticks.push(ev);
+        }
+
         BeatSpec {
-            ticks: vec![],
-            beat_len: 1,
-            tempo: 60.0,
+            ticks,
+            beat_len: n_ticks / beats_[0],
+            tempo,
         }
     }
 
@@ -75,6 +97,30 @@ impl BeatSpec {
     pub fn play_measure(&self) {
         // TODO: Implement.
     }
+}
+
+// Returns the lowest common multiple of the set of integers.
+fn lcm(nums: &[u32]) -> u32 {
+    let mut lcm = 1;
+    for n in nums {
+        lcm = lcm * (*n) / euclid(lcm, *n);
+    }
+
+    lcm
+}
+
+// Returns the greatest common divisor of two integers (Euclidean
+// algorithm).
+fn euclid(a: u32, b: u32) -> u32 {
+    let mut a = a;
+    let mut b = b;
+    while b != 0 {
+        let tmp = b;
+        b = a % b;
+        a = tmp;
+    }
+
+    a
 }
 
 #[cfg(test)]
@@ -106,5 +152,18 @@ mod tests {
         assert_eq!(bs.ticks.len(), 6);
         assert_eq!(bs.beat_len, 2);
         assert_eq!(bs.tempo, 60.0);
+    }
+
+    #[test]
+    fn lcm_test() {
+        assert_eq!(euclid(12, 12), 12);
+        assert_eq!(euclid(12, 13), 1);
+        assert_eq!(euclid(12, 14), 2);
+        assert_eq!(euclid(12, 15), 3);
+        assert_eq!(euclid(12, 16), 4);
+
+        assert_eq!(lcm(&vec![12, 12, 13, 14, 15, 16]),
+                   12 * 12 * 13 * 14 * 15 * 16
+                   / 12 / 1 / 2 / 3 / 4);
     }
 }
