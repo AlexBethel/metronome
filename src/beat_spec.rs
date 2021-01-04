@@ -31,7 +31,7 @@ pub struct BeatSpec {
 }
 
 // Different types of events that can occur in a measure.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Event {
     // Do nothing during this tick.
     Rest,
@@ -143,6 +143,13 @@ mod tests {
         assert_eq!(bs.ticks.len(), 6);
         assert_eq!(bs.beat_len, 2);
         assert_eq!(bs.tempo, 60.0);
+
+        assert_eq!(bs.ticks[0], Event::Beep(0));
+        assert_eq!(bs.ticks[1], Event::Beep(2));
+        assert_eq!(bs.ticks[2], Event::Beep(1));
+        assert_eq!(bs.ticks[3], Event::Beep(2));
+        assert_eq!(bs.ticks[4], Event::Beep(1));
+        assert_eq!(bs.ticks[5], Event::Beep(2));
     }
 
     #[test]
