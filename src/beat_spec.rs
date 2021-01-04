@@ -84,13 +84,36 @@ impl BeatSpec {
     }
 
     // Creates a BeatSpec from a rhythm specification string.
-    pub fn from_rhythmspec(_tempo: f64, _spec: &str) -> BeatSpec {
-        // TODO: Implement.
-        BeatSpec {
-            ticks: vec![],
-            beat_len: 1,
-            tempo: 60.0,
+    pub fn from_rhythmspec(tempo: f64, spec: &str)
+                           -> Result<BeatSpec, String> {
+        let mut ticks = vec![];
+        let mut beat_len = 1;
+
+        let mut n = 0;
+        for c in spec.chars() {
+            match c {
+                '0'..='9' => {
+                    ticks.push(Event::Beep(c as u32 - '0' as u32));
+                },
+                '.' => {
+                    ticks.push(Event::Rest);
+                },
+                '!' => {
+                    beat_len = n;
+                },
+                _ => {
+                    return Err(String::from("Unknown rhythm spec command ")
+                               + &String::from(c));
+                }
+            }
+            n += 1;
         }
+
+        Ok(BeatSpec {
+            ticks,
+            beat_len,
+            tempo,
+        })
     }
 
     // Plays a single measure with this BeatSpec.
@@ -154,7 +177,7 @@ mod tests {
 
     #[test]
     fn rspec_test() {
-        let bs = BeatSpec::from_rhythmspec(60.0, "02!1212");
+        let bs = BeatSpec::from_rhythmspec(60.0, "02!1212").unwrap();
 
         assert_eq!(bs.ticks.len(), 6);
         assert_eq!(bs.beat_len, 2);
