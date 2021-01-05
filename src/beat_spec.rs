@@ -70,15 +70,13 @@ impl BeatSpec {
         let mut ticks = vec![];
         for tick in 0..n_ticks {
             let mut ev = Event::Rest;
-            let mut n = 0;
-            for beat in &beats {
+            for n in 0..beats.len() {
+                let beat = beats[n];
                 assert_eq!(n_ticks % beat, 0);
                 if tick % (n_ticks / beat) == 0 {
-                    ev = Event::Beep(n);
+                    ev = Event::Beep(n as u32);
                     break;
                 }
-                // FIXME: Is there a more idiomatic way to do this?
-                n += 1;
             }
 
             ticks.push(ev);
