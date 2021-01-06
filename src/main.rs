@@ -16,8 +16,22 @@
 // You should have received a copy of the GNU General Public License
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
+extern crate getopts;
 pub mod config;
 pub mod beat_spec;
+
+use error_chain::{ error_chain };
+mod errors {
+    use super::*;
+    error_chain! {
+        foreign_links {
+            Options(::getopts::Fail);
+            ParseFloatError(::std::num::ParseFloatError);
+            ParseIntError(::std::num::ParseIntError);
+        }
+    }
+}
+
 
 fn main() {
     println!("Hello, world!");

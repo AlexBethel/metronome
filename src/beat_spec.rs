@@ -16,13 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
-use error_chain::{ bail, error_chain };
-
-mod errors {
-    use super::*;
-    error_chain! {}
-}
-pub use errors::*;
+use crate::errors::*;
+use error_chain::bail;
 
 // Description of precisely what events should occur and when during a
 // single measure.
@@ -35,7 +30,7 @@ pub struct BeatSpec {
     beat_len: u32,
 
     // Tempo, in beats per minute.
-    tempo: f64,
+    pub tempo: f64,
 }
 
 // Different types of events that can occur in a measure.
