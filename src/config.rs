@@ -31,7 +31,7 @@ struct Config {
 // Possible outcomes from parsing a configuration.
 enum ConfigResult {
     // Successfully parsed the config.
-    Ok(Config),
+    Run(Config),
 
     // The config was well-formed, but it implied that the main
     // program shouldn't be run. This is the case with options like
@@ -81,7 +81,7 @@ impl Config {
                 beat_spec, &matches.opt_str("s").unwrap())?;
         }
 
-        return Ok(ConfigResult::Ok(Config {
+        return Ok(ConfigResult::Run(Config {
             rhythm: beat_spec,
         }));
     }
