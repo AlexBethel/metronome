@@ -42,7 +42,6 @@ pub enum Event {
     // Default metronome sound; the u32 is the emphasis level of the
     // beat.
     Beep(u32),
-
     // Could add other types of sounds, messages etc. in the future.
 }
 
@@ -85,8 +84,7 @@ impl BeatSpec {
     }
 
     // Creates a BeatSpec from a rhythm specification string.
-    pub fn from_rhythmspec(tempo: f64, spec: &str)
-                           -> Result<BeatSpec> {
+    pub fn from_rhythmspec(tempo: f64, spec: &str) -> Result<BeatSpec> {
         let mut ticks = vec![];
         let mut beat_len = 1;
 
@@ -95,16 +93,15 @@ impl BeatSpec {
             match c {
                 '0'..='9' => {
                     ticks.push(Event::Beep(c as u32 - '0' as u32));
-                },
+                }
                 '.' => {
                     ticks.push(Event::Rest);
-                },
+                }
                 '!' => {
                     beat_len = n;
-                },
+                }
                 _ => {
-                    bail!(String::from("Unknown rhythm spec command ")
-                          + &String::from(c));
+                    bail!(String::from("Unknown rhythm spec command ") + &String::from(c));
                 }
             }
             n += 1;
@@ -201,8 +198,9 @@ mod tests {
         assert_eq!(euclid(12, 15), 3);
         assert_eq!(euclid(12, 16), 4);
 
-        assert_eq!(lcm(&vec![12, 12, 13, 14, 15, 16]),
-                   12 * 12 * 13 * 14 * 15 * 16
-                   / 12 / 1 / 2 / 3 / 4);
+        assert_eq!(
+            lcm(&vec![12, 12, 13, 14, 15, 16]),
+            12 * 12 * 13 * 14 * 15 * 16 / 12 / 1 / 2 / 3 / 4
+        );
     }
 }

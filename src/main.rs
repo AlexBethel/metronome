@@ -17,14 +17,14 @@
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
 extern crate getopts;
-pub mod constants;
-pub mod config;
 pub mod beat_spec;
+pub mod config;
+pub mod constants;
 
-use std::env;
 use config::Config;
+use std::env;
 
-use error_chain::{ error_chain, quick_main };
+use error_chain::{error_chain, quick_main};
 mod errors {
     use super::*;
     error_chain! {

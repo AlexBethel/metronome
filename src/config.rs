@@ -17,8 +17,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::constants;
 use crate::beat_spec::BeatSpec;
+use crate::constants;
 use crate::errors::*;
 use error_chain::bail;
 use getopts::Options;
@@ -48,19 +48,19 @@ impl Config {
 
         let mut opts = Options::new();
         opts.optopt(
-            "c", "crossbeats",
+            "c",
+            "crossbeats",
             "Specifies a polyrhythm of several simultaneous crossbeats.",
-            "<cross1>[:<cross2>[...]]");
+            "<cross1>[:<cross2>[...]]",
+        );
         opts.optopt(
-            "s", "rhythm",
+            "s",
+            "rhythm",
             "Directly specifies a rhythm to beat out.",
-            "<rhythm>");
-        opts.optflag(
-            "h", "help",
-            "Prints this help message.");
-        opts.optflag(
-            "v", "version",
-            "Prints the program version and legal info.");
+            "<rhythm>",
+        );
+        opts.optflag("h", "help", "Prints this help message.");
+        opts.optflag("v", "version", "Prints the program version and legal info.");
 
         let matches = opts.parse(args)?;
         if matches.opt_present("h") {
@@ -74,17 +74,13 @@ impl Config {
 
         let mut beat_spec = parse_free_args(&matches)?;
         if matches.opt_present("c") {
-            beat_spec = parse_cross_rhythms(
-                beat_spec, &matches.opt_str("c").unwrap())?;
+            beat_spec = parse_cross_rhythms(beat_spec, &matches.opt_str("c").unwrap())?;
         }
         if matches.opt_present("s") {
-            beat_spec = parse_rhythm_string(
-                beat_spec, &matches.opt_str("s").unwrap())?;
+            beat_spec = parse_rhythm_string(beat_spec, &matches.opt_str("s").unwrap())?;
         }
 
-        return Ok(ConfigResult::Run(Config {
-            rhythm: beat_spec,
-        }));
+        return Ok(ConfigResult::Run(Config { rhythm: beat_spec }));
     }
 }
 
@@ -96,13 +92,14 @@ fn parse_free_args(matches: &getopts::Matches) -> Result<BeatSpec> {
         0 => Ok(BeatSpec::from_subdiv(
             constants::DEF_TEMPO,
             constants::DEF_BEATS_PER_MEASURE,
-            constants::DEF_SUBDIV_PER_BEAT)),
+            constants::DEF_SUBDIV_PER_BEAT,
+        )),
         1 => parse_free_arg(&matches.free[0]),
         _ => {
             print_help();
             bail!("Too many operands");
         }
-    }
+    };
 }
 
 // Parses the free argument to the program (which takes the form
@@ -131,14 +128,15 @@ fn parse_free_arg(arg: &str) -> Result<BeatSpec> {
     };
 
     Ok(BeatSpec::from_subdiv(
-        tempo, beats_per_measure, subdivisions_per_beat
+        tempo,
+        beats_per_measure,
+        subdivisions_per_beat,
     ))
 }
 
 // Parses and applies a cross-rhythm string. Returns a modified
 // version of the supplied BeatSpec object.
-fn parse_cross_rhythms(beat_spec: BeatSpec, cross_str: &str)
-                       -> Result<BeatSpec> {
+fn parse_cross_rhythms(beat_spec: BeatSpec, cross_str: &str) -> Result<BeatSpec> {
     let mut beats = vec![];
     let beats_str = cross_str.split(':');
     for beat in beats_str {
@@ -150,8 +148,7 @@ fn parse_cross_rhythms(beat_spec: BeatSpec, cross_str: &str)
 
 // Parses and applies a rhythm specification string. Returns a
 // modified version of the supplied BeatSpec object.
-fn parse_rhythm_string(beat_spec: BeatSpec, rhythm_str: &str)
-                       -> Result<BeatSpec> {
+fn parse_rhythm_string(beat_spec: BeatSpec, rhythm_str: &str) -> Result<BeatSpec> {
     BeatSpec::from_rhythmspec(beat_spec.get_tempo(), rhythm_str)
 }
 
@@ -163,10 +160,12 @@ fn print_help() {
 
 // Prints the program's version, as well as legal information.
 fn print_version() {
-    println!("{} version {}",
-             constants::NAME, constants::VER);
-    println!("Copyright (c) {} by {}. All rights reserved.",
-             constants::COPY_YEARS, constants::COPY_AUTHORS);
+    println!("{} version {}", constants::NAME, constants::VER);
+    println!(
+        "Copyright (c) {} by {}. All rights reserved.",
+        constants::COPY_YEARS,
+        constants::COPY_AUTHORS
+    );
     println!("{}", constants::LEGAL);
 }
 
@@ -176,26 +175,28 @@ mod tests {
 
     #[test]
     fn config_test() {
-        let default_test = match Config::new(
-            &vec!["foo"]).unwrap() {
+        let default_test = match Config::new(&vec!["foo"]).unwrap() {
             ConfigResult::Run(x) => x,
             ConfigResult::DontRun => panic!("Got DontRun"),
         };
         assert_eq!(default_test.rhythm.get_tempo(), constants::DEF_TEMPO);
-        assert_eq!(default_test.rhythm.get_beat_len(),
-                   constants::DEF_SUBDIV_PER_BEAT);
-        assert_eq!(default_test.rhythm.get_ticks().len(),
-                   constants::DEF_SUBDIV_PER_BEAT as usize
-                   * constants::DEF_BEATS_PER_MEASURE as usize);
+        assert_eq!(
+            default_test.rhythm.get_beat_len(),
+            constants::DEF_SUBDIV_PER_BEAT
+        );
+        assert_eq!(
+            default_test.rhythm.get_ticks().len(),
+            (constants::DEF_SUBDIV_PER_BEAT * constants::DEF_BEATS_PER_MEASURE) as usize
+        );
 
         // Test that --help and --version don't start the metronome.
         match Config::new(&vec!["foo", "--help"]).unwrap() {
             ConfigResult::Run(_) => panic!("--help runs metronome"),
-            ConfigResult::DontRun => { },
+            ConfigResult::DontRun => {}
         }
         match Config::new(&vec!["foo", "--version"]).unwrap() {
             ConfigResult::Run(_) => panic!("--version runs metronome"),
-            ConfigResult::DontRun => { },
+            ConfigResult::DontRun => {}
         }
 
         // Check crossbeats and rhythm specifications.
@@ -222,9 +223,10 @@ mod tests {
         let test_1 = parse_free_arg("72").unwrap();
         assert_eq!(test_1.get_tempo(), 72.0);
         assert_eq!(test_1.get_beat_len(), constants::DEF_SUBDIV_PER_BEAT);
-        assert_eq!(test_1.get_ticks().len(),
-                   constants::DEF_BEATS_PER_MEASURE as usize
-                   * constants::DEF_SUBDIV_PER_BEAT as usize);
+        assert_eq!(
+            test_1.get_ticks().len(),
+            (constants::DEF_BEATS_PER_MEASURE * constants::DEF_SUBDIV_PER_BEAT) as usize
+        );
 
         let test_2 = parse_free_arg("72:5:3").unwrap();
         assert_eq!(test_2.get_tempo(), 72.0);
