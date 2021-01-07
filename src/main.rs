@@ -21,7 +21,10 @@ pub mod constants;
 pub mod config;
 pub mod beat_spec;
 
-use error_chain::{ error_chain };
+use std::env;
+use config::Config;
+
+use error_chain::{ error_chain, quick_main };
 mod errors {
     use super::*;
     error_chain! {
@@ -32,8 +35,20 @@ mod errors {
         }
     }
 }
+use errors::*;
 
+quick_main!(run);
+fn run() -> Result<()> {
+    let args_vec: Vec<String> = env::args().collect();
+    let mut args_ref: Vec<&str> = vec![];
+    for arg in args_vec.iter() {
+        args_ref.push(&arg);
+    }
 
-fn main() {
-    println!("Hello, world!");
+    let cfg = Config::new(&args_ref)?;
+    if let config::ConfigResult::Run(_cfg) = cfg {
+        println!("TODO: Implement functionality");
+    }
+
+    Ok(())
 }

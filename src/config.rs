@@ -24,13 +24,13 @@ use error_chain::bail;
 use getopts::Options;
 
 // Summary of the user's desired configuration for the program.
-struct Config {
+pub struct Config {
     // Specification of the rhythm to beat.
     pub rhythm: BeatSpec,
 }
 
 // Possible outcomes from parsing a configuration.
-enum ConfigResult {
+pub enum ConfigResult {
     // Successfully parsed the config.
     Run(Config),
 
@@ -221,8 +221,10 @@ mod tests {
         // Should default to being in 4, with no beat subdivision.
         let test_1 = parse_free_arg("72").unwrap();
         assert_eq!(test_1.get_tempo(), 72.0);
-        assert_eq!(test_1.get_beat_len(), 1);
-        assert_eq!(test_1.get_ticks().len(), 4);
+        assert_eq!(test_1.get_beat_len(), constants::DEF_SUBDIV_PER_BEAT);
+        assert_eq!(test_1.get_ticks().len(),
+                   constants::DEF_BEATS_PER_MEASURE as usize
+                   * constants::DEF_SUBDIV_PER_BEAT as usize);
 
         let test_2 = parse_free_arg("72:5:3").unwrap();
         assert_eq!(test_2.get_tempo(), 72.0);
