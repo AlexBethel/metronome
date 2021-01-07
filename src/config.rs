@@ -114,15 +114,15 @@ fn parse_free_arg(arg: &str) -> Result<BeatSpec> {
         bail!("Unexpected ':' in free arg");
     }
 
-    let tempo: f64 = match tempo {
+    let tempo = match tempo {
         Some(x) => x.parse()?,
         None => constants::DEF_TEMPO,
     };
-    let beats_per_measure: u32 = match beats_per_measure {
+    let beats_per_measure = match beats_per_measure {
         Some(x) => x.parse()?,
         None => constants::DEF_BEATS_PER_MEASURE,
     };
-    let subdivisions_per_beat: u32 = match subdivisions_per_beat {
+    let subdivisions_per_beat = match subdivisions_per_beat {
         Some(x) => x.parse()?,
         None => constants::DEF_SUBDIV_PER_BEAT,
     };
@@ -165,4 +165,94 @@ fn print_version() {
     println!("Copyright (c) {} by {}. All rights reserved.",
              constants::COPY_YEARS, constants::COPY_AUTHORS);
     println!("{}", constants::LEGAL);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_test() {
+        let default_test = match Config::new(
+            &vec!["foo"]).unwrap() {
+            ConfigResult::Run(x) => x,
+            ConfigResult::DontRun => panic!("Got DontRun"),
+        };
+        assert_eq!(default_test.rhythm.get_tempo(), constants::DEF_TEMPO);
+        assert_eq!(default_test.rhythm.get_beat_len(),
+                   constants::DEF_SUBDIV_PER_BEAT);
+        assert_eq!(default_test.rhythm.get_ticks().len(),
+                   constants::DEF_SUBDIV_PER_BEAT as usize
+                   * constants::DEF_BEATS_PER_MEASURE as usize);
+
+        // Test that --help and --version don't start the metronome.
+        match Config::new(&vec!["foo", "--help"]).unwrap() {
+            ConfigResult::Run(_) => panic!("--help runs metronome"),
+            ConfigResult::DontRun => { },
+        }
+        match Config::new(&vec!["foo", "--version"]).unwrap() {
+            ConfigResult::Run(_) => panic!("--version runs metronome"),
+            ConfigResult::DontRun => { },
+        }
+
+        // Check crossbeats and rhythm specifications.
+        let ctest = match Config::new(&vec!["foo", "-c", "2:3"]).unwrap() {
+            ConfigResult::Run(x) => x,
+            ConfigResult::DontRun => panic!("Got DontRun"),
+        };
+        assert_eq!(ctest.rhythm.get_tempo(), constants::DEF_TEMPO);
+        assert_eq!(ctest.rhythm.get_beat_len(), 3);
+        assert_eq!(ctest.rhythm.get_ticks().len(), (2 * 3) as usize);
+
+        let stest = match Config::new(&vec!["foo", "-s", "01!2"]).unwrap() {
+            ConfigResult::Run(x) => x,
+            ConfigResult::DontRun => panic!("Got DontRun"),
+        };
+        assert_eq!(stest.rhythm.get_tempo(), constants::DEF_TEMPO);
+        assert_eq!(stest.rhythm.get_beat_len(), 2);
+        assert_eq!(stest.rhythm.get_ticks().len(), 3);
+    }
+
+    #[test]
+    fn free_arg_test() {
+        // Should default to being in 4, with no beat subdivision.
+        let test_1 = parse_free_arg("72").unwrap();
+        assert_eq!(test_1.get_tempo(), 72.0);
+        assert_eq!(test_1.get_beat_len(), 1);
+        assert_eq!(test_1.get_ticks().len(), 4);
+
+        let test_2 = parse_free_arg("72:5:3").unwrap();
+        assert_eq!(test_2.get_tempo(), 72.0);
+        assert_eq!(test_2.get_beat_len(), 3);
+        assert_eq!(test_2.get_ticks().len(), 5 * 3);
+
+        // Extra parameters and invalid numbers should both throw
+        // syntax errors.
+        let test_invalid = parse_free_arg("72:x:3");
+        if let Ok(_) = test_invalid {
+            panic!("Valid result from invalid input");
+        }
+
+        let test_invalid = parse_free_arg("72:5:3:4");
+        if let Ok(_) = test_invalid {
+            panic!("Succeeded with too many parameters");
+        }
+    }
+
+    #[test]
+    fn cross_rhythm_parse_test() {
+        // Need a template to get the tempo from.
+        let tmp = BeatSpec::from_rhythmspec(72.0, "0").unwrap();
+
+        // Use 3 primes to make the math simpler.
+        let valid_test = parse_cross_rhythms(tmp, "3:5:17").unwrap();
+        assert_eq!(valid_test.get_tempo(), 72.0);
+        assert_eq!(valid_test.get_beat_len(), 5 * 17);
+        assert_eq!(valid_test.get_ticks().len(), 3 * 5 * 17);
+
+        let invalid_test = parse_cross_rhythms(valid_test, "3:x:17");
+        if let Ok(_) = invalid_test {
+            panic!("Valid result from invalid input");
+        }
+    }
 }
