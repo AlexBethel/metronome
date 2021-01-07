@@ -30,12 +30,12 @@ pub struct BeatSpec {
     beat_len: u32,
 
     // Tempo, in beats per minute.
-    pub tempo: f64,
+    tempo: f64,
 }
 
 // Different types of events that can occur in a measure.
 #[derive(Debug, PartialEq)]
-enum Event {
+pub enum Event {
     // Do nothing during this tick.
     Rest,
 
@@ -117,9 +117,17 @@ impl BeatSpec {
         })
     }
 
-    // Plays a single measure with this BeatSpec.
-    pub fn play_measure(&self) {
-        // TODO: Implement.
+    // Accessor functions
+    pub fn get_ticks(&self) -> &[Event] {
+        &self.ticks
+    }
+
+    pub fn get_beat_len(&self) -> u32 {
+        self.beat_len
+    }
+
+    pub fn get_tempo(&self) -> f64 {
+        self.tempo
     }
 }
 

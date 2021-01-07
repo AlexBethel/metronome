@@ -142,14 +142,14 @@ fn parse_cross_rhythms(beat_spec: BeatSpec, cross_str: &str)
         beats.push(beat.parse()?);
     }
 
-    Ok(BeatSpec::from_crossbeats(beat_spec.tempo, &beats))
+    Ok(BeatSpec::from_crossbeats(beat_spec.get_tempo(), &beats))
 }
 
 // Parses and applies a rhythm specification string. Returns a
 // modified version of the supplied BeatSpec object.
 fn parse_rhythm_string(beat_spec: BeatSpec, rhythm_str: &str)
                        -> Result<BeatSpec> {
-    BeatSpec::from_rhythmspec(beat_spec.tempo, rhythm_str)
+    BeatSpec::from_rhythmspec(beat_spec.get_tempo(), rhythm_str)
 }
 
 // Prints the program's usage string.
