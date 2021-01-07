@@ -1,4 +1,4 @@
-// Main program entry point for the program.
+// Compile-time constants.
 // Copyright (c) 2021 by Alexander Bethel.
 
 // This file is part of Metronome.
@@ -16,24 +16,25 @@
 // You should have received a copy of the GNU General Public License
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
-extern crate getopts;
-pub mod constants;
-pub mod config;
-pub mod beat_spec;
+// ---- Meta ----
 
-use error_chain::{ error_chain };
-mod errors {
-    use super::*;
-    error_chain! {
-        foreign_links {
-            Options(::getopts::Fail);
-            ParseFloatError(::std::num::ParseFloatError);
-            ParseIntError(::std::num::ParseIntError);
-        }
-    }
-}
+// Name of the project.
+pub const NAME: &str = "metronome";
 
+// Program version. (Will bump to 0.1.0 when calling main() actually
+// does something.) Try and keep this in sync with Git tags.
+pub const VER: &str = "0.0.0";
 
-fn main() {
-    println!("Hello, world!");
-}
+// Program copyright year(s) and author(s).
+pub const COPY_YEARS: &str = "2021";
+pub const COPY_AUTHORS: &str = "Alexander Bethel";
+
+// Program license information.
+pub const LEGAL: &str = "Licensed under the GNU GPLv3.0.";
+
+// ---- Default options ----
+
+// Default tempo, beats per measure & subdivisions per beat.
+pub const DEF_TEMPO: f64 = 120.0;
+pub const DEF_BEATS_PER_MEASURE: u32 = 4;
+pub const DEF_SUBDIV_PER_BEAT: u32 = 1;

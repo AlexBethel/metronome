@@ -17,6 +17,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::constants;
 use crate::beat_spec::BeatSpec;
 use crate::errors::*;
 use error_chain::bail;
@@ -115,15 +116,15 @@ fn parse_free_arg(arg: &str) -> Result<BeatSpec> {
 
     let tempo: f64 = match tempo {
         Some(x) => x.parse()?,
-        None => 120.0,          // TODO: Extract constants
+        None => constants::DEF_TEMPO,
     };
     let beats_per_measure: u32 = match beats_per_measure {
         Some(x) => x.parse()?,
-        None => 4,
+        None => constants::DEF_BEATS_PER_MEASURE,
     };
     let subdivisions_per_beat: u32 = match subdivisions_per_beat {
         Some(x) => x.parse()?,
-        None => 4,
+        None => constants::DEF_SUBDIV_PER_BEAT,
     };
 
     Ok(BeatSpec::from_subdiv(
@@ -159,10 +160,9 @@ fn print_help() {
 
 // Prints the program's version, as well as legal information.
 fn print_version() {
-    // TODO: extract constants
     println!("{} version {}",
-             "metronome", "0.0.0");
-    println!(
-        "Copyright (c) 2021 by Alexander Bethel. All rights reserved.");
-    println!("Licensed under the GNU GPLv3.0.");
+             constants::NAME, constants::VER);
+    println!("Copyright (c) {} by {}. All rights reserved.",
+             constants::COPY_YEARS, constants::COPY_AUTHORS);
+    println!("{}", constants::LEGAL);
 }
