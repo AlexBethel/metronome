@@ -93,7 +93,10 @@ impl Config {
 // the option arguments.
 fn parse_free_args(matches: &getopts::Matches) -> Result<BeatSpec> {
     return match matches.free.len() {
-        0 => Ok(BeatSpec::from_subdiv(120.0, 4, 1)),
+        0 => Ok(BeatSpec::from_subdiv(
+            constants::DEF_TEMPO,
+            constants::DEF_BEATS_PER_MEASURE,
+            constants::DEF_SUBDIV_PER_BEAT)),
         1 => parse_free_arg(&matches.free[0]),
         _ => {
             print_help();
