@@ -41,43 +41,63 @@ pub enum ConfigResult {
     DontRun,
 }
 
+// Command-line usage switch.
+enum CmdSwitch {
+    // A switch taking an argument.
+    Option {
+        short_name: &'static str,
+        long_name: &'static str,
+        description: &'static str,
+        example: &'static str,
+
+        action: &'static dyn Fn(&str, &mut BeatSpec, &Options)
+                                -> Result<Option<ConfigResult>>,
+    },
+
+    // A switch that does not have an argument.
+    Flag {
+        short_name: &'static str,
+        long_name: &'static str,
+        description: &'static str,
+
+        action: &'static dyn Fn(&mut BeatSpec, &Options)
+                                -> Result<Option<ConfigResult>>,
+    }
+}
+
 impl Config {
     // Creates a new Config from the program command-line arguments.
     pub fn new(args: &[&str]) -> Result<ConfigResult> {
         let args = &args[1..];
 
-        let mut opts = Options::new();
-        opts.optopt(
-            "c",
-            "crossbeats",
-            "Specifies a polyrhythm of several simultaneous crossbeats.",
-            "<cross1>[:<cross2>[...]]",
-        );
-        opts.optopt(
-            "s",
-            "rhythm",
-            "Directly specifies a rhythm to beat out.",
-            "<rhythm>",
-        );
-        opts.optflag("h", "help", "Prints this help message.");
-        opts.optflag("v", "version", "Prints the program version and legal info.");
+        let opts = compile_opts(SWITCHES);
 
         let matches = opts.parse(args)?;
-        if matches.opt_present("h") {
-            print_help();
-            return Ok(ConfigResult::DontRun);
-        }
-        if matches.opt_present("v") {
-            print_version();
-            return Ok(ConfigResult::DontRun);
-        }
+        let mut beat_spec = parse_free_args(&matches, &opts)?;
 
-        let mut beat_spec = parse_free_args(&matches)?;
-        if matches.opt_present("c") {
-            beat_spec = parse_cross_rhythms(beat_spec, &matches.opt_str("c").unwrap())?;
-        }
-        if matches.opt_present("s") {
-            beat_spec = parse_rhythm_string(beat_spec, &matches.opt_str("s").unwrap())?;
+        for switch in SWITCHES {
+            let short_name = match switch {
+                CmdSwitch::Option { short_name, .. } => short_name,
+                CmdSwitch::Flag { short_name, .. } => short_name,
+            };
+
+            if matches.opt_present(short_name) {
+                let res = match switch {
+                    CmdSwitch::Option { action, .. } => {
+                        action(&matches.opt_str(short_name).unwrap(),
+                               &mut beat_spec,
+                               &opts)
+                    },
+                    CmdSwitch::Flag { action, .. } => {
+                        action(&mut beat_spec,
+                               &opts)
+                    }
+                }?;
+
+                if let Some(v) = res {
+                    return Ok(v);
+                }
+            }
         }
 
         return Ok(ConfigResult::Run(Config { rhythm: beat_spec }));
@@ -87,7 +107,7 @@ impl Config {
 // Parses all the free arguments to the program. Returns a default
 // BeatSpec object, which might be further modified or varied upon by
 // the option arguments.
-fn parse_free_args(matches: &getopts::Matches) -> Result<BeatSpec> {
+fn parse_free_args(matches: &getopts::Matches, opts: &Options) -> Result<BeatSpec> {
     return match matches.free.len() {
         0 => Ok(BeatSpec::from_subdiv(
             constants::DEF_TEMPO,
@@ -96,7 +116,7 @@ fn parse_free_args(matches: &getopts::Matches) -> Result<BeatSpec> {
         )),
         1 => parse_free_arg(&matches.free[0]),
         _ => {
-            print_help();
+            print_help(opts);
             bail!("Too many operands");
         }
     };
@@ -134,9 +154,105 @@ fn parse_free_arg(arg: &str) -> Result<BeatSpec> {
     ))
 }
 
+// Compiles a set of options in our format to the getopt::Options
+// format.
+fn compile_opts(switches: &[CmdSwitch]) -> Options {
+    let mut opts = Options::new();
+    for opt in switches {
+        match opt {
+            CmdSwitch::Option {
+                short_name,
+                long_name,
+                description,
+                example,
+                action: _,
+            } => {
+                opts.optopt(
+                    short_name,
+                    long_name,
+                    description,
+                    example,
+                );
+            },
+            CmdSwitch::Flag {
+                short_name,
+                long_name,
+                description,
+                action: _,
+            } => {
+                opts.optflag(
+                    short_name,
+                    long_name,
+                    description,
+                );
+            },
+        }
+    }
+
+    opts
+}
+
+// The switches the program checks for.
+const SWITCHES: &[CmdSwitch] = &[
+    CmdSwitch::Option {
+        short_name: "c",
+        long_name: "crossbeat",
+        description: "Specifies a polyrhythm of several simultaneous crossbeats.",
+        example: "<cross1>[:<cross2>[...]]",
+
+        action: &opt_crossbeat,
+    },
+    CmdSwitch::Option {
+        short_name: "s",
+        long_name: "rhythm",
+        description: "Directly specifies a rhythm to beat out.",
+        example: "<rhythm>",
+
+        action: &opt_rhythm,
+    },
+    CmdSwitch::Flag {
+        short_name: "h",
+        long_name: "help",
+        description: "Prints this help message.",
+
+        action: &flag_help,
+    },
+    CmdSwitch::Flag {
+        short_name: "v",
+        long_name: "version",
+        description: "Prints the program version and legal info.",
+
+        action: &flag_version,
+    },
+];
+
+fn opt_crossbeat(arg: &str, beat_spec: &mut BeatSpec, _opts: &Options)
+                 -> Result<Option<ConfigResult>> {
+    *beat_spec = parse_cross_rhythms(beat_spec, arg)?;
+    Ok(None)
+}
+
+fn opt_rhythm(arg: &str, beat_spec: &mut BeatSpec, _opts: &Options)
+              -> Result<Option<ConfigResult>> {
+    *beat_spec = parse_rhythm_string(beat_spec, arg)?;
+    Ok(None)
+}
+
+fn flag_help(_beat_spec: &mut BeatSpec, opts: &Options)
+             -> Result<Option<ConfigResult>> {
+    print_help(opts);
+    Ok(Some(ConfigResult::DontRun))
+}
+
+fn flag_version(_beat_spec: &mut BeatSpec, _opts: &Options)
+                -> Result<Option<ConfigResult>> {
+    print_version();
+    Ok(Some(ConfigResult::DontRun))
+}
+
 // Parses and applies a cross-rhythm string. Returns a modified
 // version of the supplied BeatSpec object.
-fn parse_cross_rhythms(beat_spec: BeatSpec, cross_str: &str) -> Result<BeatSpec> {
+fn parse_cross_rhythms(beat_spec: &BeatSpec, cross_str: &str) -> Result<BeatSpec> {
     let mut beats = vec![];
     let beats_str = cross_str.split(':');
     for beat in beats_str {
@@ -148,14 +264,15 @@ fn parse_cross_rhythms(beat_spec: BeatSpec, cross_str: &str) -> Result<BeatSpec>
 
 // Parses and applies a rhythm specification string. Returns a
 // modified version of the supplied BeatSpec object.
-fn parse_rhythm_string(beat_spec: BeatSpec, rhythm_str: &str) -> Result<BeatSpec> {
+fn parse_rhythm_string(beat_spec: &BeatSpec, rhythm_str: &str) -> Result<BeatSpec> {
     BeatSpec::from_rhythmspec(beat_spec.get_tempo(), rhythm_str)
 }
 
 // Prints the program's usage string.
-fn print_help() {
-    println!("TODO: Implement usage string");
-    // Need accesss to the Options object from here.
+fn print_help(opts: &Options) {
+    let brief = format!("Usage: {} [<options> ...] [<tempo>[:<beats>[:<subdiv>]]]",
+                        constants::NAME);
+    print!("{}", opts.usage(&brief));
 }
 
 // Prints the program's version, as well as legal information.
@@ -252,12 +369,12 @@ mod tests {
         let tmp = BeatSpec::from_rhythmspec(72.0, "0").unwrap();
 
         // Use 3 primes to make the math simpler.
-        let valid_test = parse_cross_rhythms(tmp, "3:5:17").unwrap();
+        let valid_test = parse_cross_rhythms(&tmp, "3:5:17").unwrap();
         assert_eq!(valid_test.get_tempo(), 72.0);
         assert_eq!(valid_test.get_beat_len(), 5 * 17);
         assert_eq!(valid_test.get_ticks().len(), 3 * 5 * 17);
 
-        let invalid_test = parse_cross_rhythms(valid_test, "3:x:17");
+        let invalid_test = parse_cross_rhythms(&valid_test, "3:x:17");
         if let Ok(_) = invalid_test {
             panic!("Valid result from invalid input");
         }
