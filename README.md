@@ -57,4 +57,10 @@ The valid commands are:
   
 ## User interface
 
-TODO: Define a user interface.
+TODO: Implement a user interface. It should be possible to:
+* Increase and decrease the tempo on a logarithmic scale.
+* Set the tempo to an arbitrary number.
+* Pause and resume the metronome.
+* Tap a key at a specific tempo, and have the metronome automatically
+  match the tempo you tap at.
+* Adjust the metronome's volume.
