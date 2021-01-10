@@ -54,7 +54,7 @@ The valid commands are:
   start of the rhythm; so, for example, in "0..!1..", the exclamation
   mark denotes that the time between the beginning of the pattern and
   the '1' (i.e., 3 ticks) is equal to one beat.
-  
+
 ## User interface
 
 TODO: Implement a user interface. It should be possible to:
