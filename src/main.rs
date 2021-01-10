@@ -20,8 +20,10 @@ extern crate getopts;
 pub mod beat_spec;
 pub mod config;
 pub mod constants;
+pub mod metronome;
 
 use config::Config;
+use metronome::do_metronome;
 use std::env;
 
 use error_chain::{error_chain, quick_main};
@@ -46,8 +48,8 @@ fn run() -> Result<()> {
     }
 
     let cfg = Config::new(&args_ref)?;
-    if let config::ConfigResult::Run(_cfg) = cfg {
-        println!("TODO: Implement functionality");
+    if let config::ConfigResult::Run(cfg) = cfg {
+        do_metronome(&cfg.rhythm);
     }
 
     Ok(())
