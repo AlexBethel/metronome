@@ -50,8 +50,7 @@ enum CmdSwitch {
         description: &'static str,
         example: &'static str,
 
-        action: &'static dyn Fn(&str, &mut BeatSpec, &Options)
-                                -> Result<Option<ConfigResult>>,
+        action: &'static dyn Fn(&str, &mut BeatSpec, &Options) -> Result<Option<ConfigResult>>,
     },
 
     // A switch that does not have an argument.
@@ -60,9 +59,8 @@ enum CmdSwitch {
         long_name: &'static str,
         description: &'static str,
 
-        action: &'static dyn Fn(&mut BeatSpec, &Options)
-                                -> Result<Option<ConfigResult>>,
-    }
+        action: &'static dyn Fn(&mut BeatSpec, &Options) -> Result<Option<ConfigResult>>,
+    },
 }
 
 impl Config {
@@ -84,14 +82,9 @@ impl Config {
             if matches.opt_present(short_name) {
                 let res = match switch {
                     CmdSwitch::Option { action, .. } => {
-                        action(&matches.opt_str(short_name).unwrap(),
-                               &mut beat_spec,
-                               &opts)
-                    },
-                    CmdSwitch::Flag { action, .. } => {
-                        action(&mut beat_spec,
-                               &opts)
+                        action(&matches.opt_str(short_name).unwrap(), &mut beat_spec, &opts)
                     }
+                    CmdSwitch::Flag { action, .. } => action(&mut beat_spec, &opts),
                 }?;
 
                 if let Some(v) = res {
@@ -167,25 +160,16 @@ fn compile_opts(switches: &[CmdSwitch]) -> Options {
                 example,
                 action: _,
             } => {
-                opts.optopt(
-                    short_name,
-                    long_name,
-                    description,
-                    example,
-                );
-            },
+                opts.optopt(short_name, long_name, description, example);
+            }
             CmdSwitch::Flag {
                 short_name,
                 long_name,
                 description,
                 action: _,
             } => {
-                opts.optflag(
-                    short_name,
-                    long_name,
-                    description,
-                );
-            },
+                opts.optflag(short_name, long_name, description);
+            }
         }
     }
 
@@ -226,26 +210,30 @@ const SWITCHES: &[CmdSwitch] = &[
     },
 ];
 
-fn opt_crossbeat(arg: &str, beat_spec: &mut BeatSpec, _opts: &Options)
-                 -> Result<Option<ConfigResult>> {
+fn opt_crossbeat(
+    arg: &str,
+    beat_spec: &mut BeatSpec,
+    _opts: &Options,
+) -> Result<Option<ConfigResult>> {
     *beat_spec = parse_cross_rhythms(beat_spec, arg)?;
     Ok(None)
 }
 
-fn opt_rhythm(arg: &str, beat_spec: &mut BeatSpec, _opts: &Options)
-              -> Result<Option<ConfigResult>> {
+fn opt_rhythm(
+    arg: &str,
+    beat_spec: &mut BeatSpec,
+    _opts: &Options,
+) -> Result<Option<ConfigResult>> {
     *beat_spec = parse_rhythm_string(beat_spec, arg)?;
     Ok(None)
 }
 
-fn flag_help(_beat_spec: &mut BeatSpec, opts: &Options)
-             -> Result<Option<ConfigResult>> {
+fn flag_help(_beat_spec: &mut BeatSpec, opts: &Options) -> Result<Option<ConfigResult>> {
     print_help(opts);
     Ok(Some(ConfigResult::DontRun))
 }
 
-fn flag_version(_beat_spec: &mut BeatSpec, _opts: &Options)
-                -> Result<Option<ConfigResult>> {
+fn flag_version(_beat_spec: &mut BeatSpec, _opts: &Options) -> Result<Option<ConfigResult>> {
     print_version();
     Ok(Some(ConfigResult::DontRun))
 }
@@ -270,8 +258,10 @@ fn parse_rhythm_string(beat_spec: &BeatSpec, rhythm_str: &str) -> Result<BeatSpe
 
 // Prints the program's usage string.
 fn print_help(opts: &Options) {
-    let brief = format!("Usage: {} [<options> ...] [<tempo>[:<beats>[:<subdiv>]]]",
-                        constants::NAME);
+    let brief = format!(
+        "Usage: {} [<options> ...] [<tempo>[:<beats>[:<subdiv>]]]",
+        constants::NAME
+    );
     print!("{}", opts.usage(&brief));
 }
 

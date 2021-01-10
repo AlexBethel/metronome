@@ -18,8 +18,8 @@
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::beat_spec::{BeatSpec, Event};
-use std::time::Duration;
 use std::thread::sleep;
+use std::time::Duration;
 
 // Plays a ticking pattern with the given rhythm loop.
 pub fn do_metronome(rhythm: &BeatSpec) -> ! {
@@ -35,7 +35,7 @@ pub fn do_metronome(rhythm: &BeatSpec) -> ! {
 // Plays a single BeatSpec event.
 fn play_event(evt: &Event) {
     match *evt {
-        Event::Rest => { },
+        Event::Rest => {}
         Event::Beep(emph) => {
             // TODO: Implement sound.
             println!("{}", emph);
