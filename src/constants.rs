@@ -29,7 +29,11 @@ pub const COPY_YEARS: &str = "2021";
 pub const COPY_AUTHORS: &str = "Alexander Bethel";
 
 // Program license information.
-pub const LEGAL: &str = "Licensed under the GNU GPLv3.0.";
+pub const LEGAL: &str = "Licensed under the GNU GPLv3.
+
+This program comes with ABSOLUTELY NO WARRANTY. This is free software,
+and you are welcome to redistribute it under certain conditions; see
+the included LICENSE file for details.";
 
 // ---- Default options ----
 
