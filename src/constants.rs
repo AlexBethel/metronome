@@ -21,9 +21,8 @@
 // Name of the project.
 pub const NAME: &str = "metronome";
 
-// Program version. (Will bump to 0.1.0 when calling main() actually
-// does something.) Try and keep this in sync with Git tags.
-pub const VER: &str = "0.0.0";
+// Program version. Try and keep this in sync with Git tags.
+pub const VER: &str = "0.1.0";
 
 // Program copyright year(s) and author(s).
 pub const COPY_YEARS: &str = "2021";
