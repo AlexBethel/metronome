@@ -43,17 +43,17 @@ without any sort of separator between them; so "12.3" is a string of
 four commands: "1", "2", "." and "3".
 
 The valid commands are:
-* A single period '.'. This represents a rest; the metronome takes no
+* A single period ".". This represents a rest; the metronome takes no
   action during such a beat.
 * Any of the digits 0-9. The metronome briefly plays a tone whose
   frequency is derived from the digit's value, where higher digits are
   lower tones. This effect is generally used to adjust the relative
   emphasis of beats.
-* An exclamation mark '!', which modifies another immediately
+* An exclamation mark "!", which modifies another immediately
   following command. This marks the length of a beat, relative to the
   start of the rhythm; so, for example, in "0..!1..", the exclamation
   mark denotes that the time between the beginning of the pattern and
-  the '1' (i.e., 3 ticks) is equal to one beat.
+  the "1" (i.e., 3 ticks) is equal to one beat.
 
 ## User interface
 
