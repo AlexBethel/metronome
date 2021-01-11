@@ -18,6 +18,7 @@
 
 use crate::errors::*;
 use error_chain::bail;
+use std::convert::TryInto;
 
 // Description of precisely what events should occur and when during a
 // single measure.
@@ -54,14 +55,19 @@ impl BeatSpec {
 
     // Creates a BeatSpec given a set of simultaneous cross-rhythms,
     // specified in order of decreasing emphasis.
-    pub fn from_crossbeats(tempo: f64, beats_: &[u32]) -> BeatSpec {
+    pub fn from_crossbeats(tempo: f64, beats: &[u32]) -> BeatSpec {
         // Add an implicit crossbeat of 1, so we get a high-pitched
         // beep at the start of each measure.
-        let mut beats = vec![1];
-        beats.extend_from_slice(beats_);
+        let beats = &{
+            let mut tmp = vec![1];
+            tmp.extend_from_slice(beats);
+            tmp
+        };
 
         let n_ticks = lcm(&beats);
         let mut ticks = vec![];
+        ticks.reserve(n_ticks.try_into().unwrap());
+
         for tick in 0..n_ticks {
             let mut ev = Event::Rest;
             for n in 0..beats.len() {
@@ -78,7 +84,7 @@ impl BeatSpec {
 
         BeatSpec {
             ticks,
-            beat_len: n_ticks / beats_[0],
+            beat_len: n_ticks / beats[1],
             tempo,
         }
     }
@@ -86,6 +92,7 @@ impl BeatSpec {
     // Creates a BeatSpec from a rhythm specification string.
     pub fn from_rhythmspec(tempo: f64, spec: &str) -> Result<BeatSpec> {
         let mut ticks = vec![];
+        ticks.reserve(spec.len());
         let mut beat_len = 1;
 
         let mut n = 0;
@@ -132,7 +139,7 @@ impl BeatSpec {
 fn lcm(nums: &[u32]) -> u32 {
     let mut lcm = 1;
     for n in nums {
-        lcm = lcm * n / euclid(lcm, *n);
+        lcm *= n / euclid(lcm, *n);
     }
 
     lcm
@@ -141,8 +148,7 @@ fn lcm(nums: &[u32]) -> u32 {
 // Returns the greatest common divisor of two integers (Euclidean
 // algorithm).
 fn euclid(a: u32, b: u32) -> u32 {
-    let mut a = a;
-    let mut b = b;
+    let (mut a, mut b) = (a, b);
     while b != 0 {
         let tmp = b;
         b = a % b;
