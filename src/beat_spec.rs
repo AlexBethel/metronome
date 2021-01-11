@@ -132,7 +132,7 @@ impl BeatSpec {
 fn lcm(nums: &[u32]) -> u32 {
     let mut lcm = 1;
     for n in nums {
-        lcm = lcm * (*n) / euclid(lcm, *n);
+        lcm = lcm * n / euclid(lcm, *n);
     }
 
     lcm
