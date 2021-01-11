@@ -21,6 +21,7 @@ pub mod beat_spec;
 pub mod config;
 pub mod constants;
 pub mod metronome;
+pub mod sound;
 
 use config::Config;
 use metronome::do_metronome;
@@ -34,6 +35,14 @@ mod errors {
             Options(::getopts::Fail);
             ParseFloatError(::std::num::ParseFloatError);
             ParseIntError(::std::num::ParseIntError);
+            SupportedStreamConfigsError(::cpal::SupportedStreamConfigsError);
+        }
+
+        errors {
+            AudioConfig(e: String) {
+                description("Error configuring audio device"),
+                display("Error configuring audio device: {}", e),
+            }
         }
     }
 }
@@ -49,7 +58,7 @@ fn run() -> Result<()> {
 
     let cfg = Config::new(&args_ref)?;
     if let config::ConfigResult::Run(cfg) = cfg {
-        do_metronome(&cfg.rhythm);
+        do_metronome(&cfg.rhythm)?;
     }
 
     Ok(())

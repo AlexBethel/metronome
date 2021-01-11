@@ -18,28 +18,33 @@
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::beat_spec::{BeatSpec, Event};
+use crate::constants;
+use crate::errors::*;
+use crate::sound::{beep, AudioConfig};
 use std::thread::sleep;
 use std::time::Duration;
 
 // Plays a ticking pattern with the given rhythm loop.
-pub fn do_metronome(rhythm: &BeatSpec) -> ! {
+pub fn do_metronome(rhythm: &BeatSpec) -> Result<()> {
+    let cfg = AudioConfig::new()?;
     let delay = get_delay(rhythm);
     loop {
         for tick in rhythm.get_ticks() {
-            play_event(tick);
+            play_event(tick, &cfg);
             sleep(delay);
         }
     }
 }
 
 // Plays a single BeatSpec event.
-fn play_event(evt: &Event) {
+fn play_event(evt: &Event, cfg: &AudioConfig) {
     match *evt {
         Event::Rest => {}
-        Event::Beep(emph) => {
-            // TODO: Implement sound.
-            println!("{}", emph);
-        }
+        Event::Beep(emph) => beep(
+            constants::BEEP_PITCH / (emph + 1) as f64,
+            Duration::from_millis(constants::BEAT_LEN),
+            cfg,
+        ),
     }
 }
 

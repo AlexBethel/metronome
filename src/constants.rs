@@ -38,3 +38,11 @@ pub const LEGAL: &str = "Licensed under the GNU GPLv3.0.";
 pub const DEF_TEMPO: f64 = 120.0;
 pub const DEF_BEATS_PER_MEASURE: u32 = 4;
 pub const DEF_SUBDIV_PER_BEAT: u32 = 1;
+
+// ---- Sound options ----
+
+// Length of a beep, in milliseconds.
+pub const BEAT_LEN: u64 = 150;
+
+// Pitch of the highest beep the metronome produces.
+pub const BEEP_PITCH: f64 = 880.0;

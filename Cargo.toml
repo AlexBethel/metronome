@@ -8,4 +8,5 @@ edition = "2018"
 
 [dependencies]
 error-chain = "0.12.4"
-getopts = "0.2"
+getopts = "0.2.21"
+cpal = "0.13.1"
