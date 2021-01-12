@@ -6,6 +6,20 @@ prioritized clean, simple and idiomatic code above advanced and
 diverse features. Admittedly, I've only been coding in Rust for about
 a week, so I won't pretend I've done a spectacular job of that.
 
+## Installing
+
+First, make sure you have Rust installed -- if `which cargo` doesn't
+find a match, run this command to install the Rust toolchain for your
+user account:
+
+```sh
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+Now, run `cargo install --path .` to compile and install the program,
+or `cargo build` to just build the executable in the `target/debug/`
+directory.
+
 ## Invocation
 
 `metronome <tempo>[:<beats_per_measure>[:<subdivisions_per_beat>]]`
