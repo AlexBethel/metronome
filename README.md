@@ -71,10 +71,20 @@ The valid commands are:
 
 ## User interface
 
-TODO: Implement a user interface. It should be possible to:
-* Increase and decrease the tempo on a logarithmic scale.
+The metronome can be controlled to some degree via the keyboard. The
+key bindings are:
+* "p": Pause
+* "P": Play
+* " " (space): Toggle between playing and paused
+* Up: Increase volume
+* Down: Decrease volume
+* Right: Increase tempo
+* Left: Decrease tempo
+* "q": Quit
+
+TODO: Add more controls. It should be possible to:
 * Set the tempo to an arbitrary number.
-* Pause and resume the metronome.
 * Tap a key at a specific tempo, and have the metronome automatically
   match the tempo you tap at.
-* Adjust the metronome's volume.
+
+TODO: Add visual indicators.
