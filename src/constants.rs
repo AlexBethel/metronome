@@ -35,12 +35,15 @@ This program comes with ABSOLUTELY NO WARRANTY. This is free software,
 and you are welcome to redistribute it under certain conditions; see
 the included LICENSE file for details.";
 
-// ---- Default options ----
+// ---- Defaults for user-adjustable options ----
 
 // Default tempo, beats per measure & subdivisions per beat.
 pub const DEF_TEMPO: f64 = 120.0;
 pub const DEF_BEATS_PER_MEASURE: u32 = 4;
 pub const DEF_SUBDIV_PER_BEAT: u32 = 1;
+
+// Default volume of beeps, from 0.0 to 1.0.
+pub const DEF_VOLUME: f64 = 0.5;
 
 // ---- Sound options ----
 
@@ -49,3 +52,15 @@ pub const BEAT_LEN: u64 = 150;
 
 // Pitch of the highest beep the metronome produces.
 pub const BEEP_PITCH: f64 = 880.0;
+
+// ---- Controller options ----
+
+// Measure by which volume is adjusted per press of the volume
+// increase or decrease button. This is on a scale where 0.0 is silent
+// and 1.0 is max volume.
+pub const VOL_ADJUST: f64 = 0.1;
+
+// Measure by which tempo is adjusted per press of the tempo increase
+// or decrease button, in powers of two; that is, 1.0 doubles the
+// tempo and -1.0 halves the tempo.
+pub const TEMPO_ADJUST: f64 = 0.1;

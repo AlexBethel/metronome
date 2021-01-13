@@ -87,10 +87,10 @@ impl AudioConfigInternal {
     }
 }
 
-// Plays a beep at the given frequency, for the given length of time.
-// The sound is played in another thread, so this function does not
-// block.
-pub fn beep(frequency: f64, length: Duration, cfg: &AudioConfig) {
+// Plays a beep at the given frequency, for the given length of time
+// and at the given volume. The sound is played in another thread, so
+// this function does not block.
+pub fn beep(frequency: f64, length: Duration, cfg: &AudioConfig, vol: f64) {
     let cfg = cfg.clone();
     thread::spawn(move || {
         let omega = frequency * std::f64::consts::TAU / cfg.stream_config.sample_rate.0 as f64;
@@ -99,7 +99,7 @@ pub fn beep(frequency: f64, length: Duration, cfg: &AudioConfig) {
             &cfg.stream_config,
             move |data: &mut [f32], _info: &cpal::OutputCallbackInfo| {
                 for el in data {
-                    *el = theta.sin() as f32;
+                    *el = (theta.sin() * vol) as f32;
                     theta += omega;
                 }
             },

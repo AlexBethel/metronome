@@ -20,12 +20,16 @@ extern crate getopts;
 pub mod beat_spec;
 pub mod config;
 pub mod constants;
+pub mod controller;
 pub mod metronome;
 pub mod sound;
 
 use config::Config;
+use controller::run_controller;
 use metronome::do_metronome;
 use std::env;
+use std::sync::mpsc::channel;
+use std::thread;
 
 use error_chain::{error_chain, quick_main};
 mod errors {
@@ -36,6 +40,7 @@ mod errors {
             ParseFloatError(::std::num::ParseFloatError);
             ParseIntError(::std::num::ParseIntError);
             SupportedStreamConfigsError(::cpal::SupportedStreamConfigsError);
+            IOError(::std::io::Error);
         }
 
         errors {
@@ -58,7 +63,11 @@ fn run() -> Result<()> {
 
     let cfg = Config::new(&args_ref)?;
     if let config::ConfigResult::Run(cfg) = cfg {
-        do_metronome(&cfg.rhythm)?;
+        let (send, recv) = channel();
+        thread::spawn(move || {
+            run_controller(send).unwrap();
+        });
+        do_metronome(&cfg.rhythm, recv)?;
     }
 
     Ok(())
