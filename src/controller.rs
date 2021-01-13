@@ -18,7 +18,9 @@
 
 use crate::constants;
 use crate::errors::*;
+use std::fmt;
 use std::io::{stdin, Read};
+use std::os::unix::io::AsRawFd;
 use std::sync::mpsc::Sender;
 
 // Messages passed from the controller to the model, indicating user
@@ -48,37 +50,174 @@ pub enum ControllerMsg {
     Quit,
 }
 
-// Runs the controller, sending messages through the given channel.
-// Returns only on error.
-pub fn run_controller(sender: Sender<ControllerMsg>) -> Result<()> {
-    loop {
-        let mut buf = vec![0];
-        stdin().read_exact(&mut buf)?;
+// A mapping from a key (represented as a set of characters, [u8]) to
+// some functionality.
+struct Binding(&'static [u8], &'static dyn Fn(&Sender<ControllerMsg>) -> ());
 
-        proc_keystroke(buf[0], &sender)?;
+impl PartialEq for Binding {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
     }
 }
 
-// Performs an action as indicated by the keystroke.
-fn proc_keystroke(key: u8, chan: &Sender<ControllerMsg>) -> Result<()> {
-    // TODO: Make this work with UTF-8 characters, not bytes.
-    match match key as char {
-        'p' => chan.send(ControllerMsg::Pause),
-        'P' => chan.send(ControllerMsg::Play),
-        ' ' => chan.send(ControllerMsg::Toggle),
+impl fmt::Debug for Binding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Binding").field(&self.0).finish()
+    }
+}
 
-        // TODO: Re-work these into arrow keys (which require multiple
-        // characters).
-        'k' => chan.send(ControllerMsg::AdjustVolume(constants::VOL_ADJUST)),
-        'j' => chan.send(ControllerMsg::AdjustVolume(-constants::VOL_ADJUST)),
-        'l' => chan.send(ControllerMsg::AdjustTempo(constants::TEMPO_ADJUST)),
-        'h' => chan.send(ControllerMsg::AdjustTempo(-constants::TEMPO_ADJUST)),
+// Runs the controller, sending messages through the given channel.
+// Returns only on error.
+pub fn run_controller(sender: Sender<ControllerMsg>) -> Result<()> {
+    init_termios()?;
+    let keys = init_keybindings();
+    loop {
+        // Read input in terms of keystrokes, which can consist of
+        // multiple characters (e.g. arrow keys, which are represented
+        // as an escape sequence).
+        let mut keystroke = vec![];
+        loop {
+            // println!("{:?}\r", keystroke);
+            let mut buf = vec![0];
+            stdin().read_exact(&mut buf)?;
+            // println!("Just got {}\r", buf[0] as u8);
+            keystroke.push(buf[0]);
 
-        'q' => chan.send(ControllerMsg::Quit),
+            match get_binding(&keystroke, &keys) {
+                BindingState::Invalid => {
+                    // println!("Invalid\r");
+                    break;
+                }
+                BindingState::Start => {
+                    // println!("Start\r");
+                }
+                BindingState::Complete(b) => {
+                    // println!("Complete\r");
+                    b.1(&sender);
+                    break;
+                }
+            }
+        }
+    }
+}
 
-        _ => Ok(()),
-    } {
-        Ok(()) => Ok(()),
-        Err(_) => Err("Error sending message".into()),
+// Sets up the vector of key mapings used by the program.
+fn init_keybindings() -> Vec<Binding> {
+    // TODO: Clean this up with a helper function of some sort.
+    let mut keys = vec![];
+    keys.push(Binding(b"p", &|sender| {
+        sender.send(ControllerMsg::Pause).unwrap();
+    }));
+    keys.push(Binding(b"P", &|sender| {
+        sender.send(ControllerMsg::Play).unwrap();
+    }));
+    keys.push(Binding(b" ", &|sender| {
+        sender.send(ControllerMsg::Toggle).unwrap();
+    }));
+
+    // Arrow keys
+    keys.push(Binding(b"\x1B[A", &|sender| {
+        // Up
+        sender
+            .send(ControllerMsg::AdjustVolume(constants::VOL_ADJUST))
+            .unwrap();
+    }));
+    keys.push(Binding(b"\x1B[B", &|sender| {
+        // Down
+        sender
+            .send(ControllerMsg::AdjustVolume(-constants::VOL_ADJUST))
+            .unwrap();
+    }));
+    keys.push(Binding(b"\x1B[C", &|sender| {
+        // Right
+        sender
+            .send(ControllerMsg::AdjustTempo(constants::TEMPO_ADJUST))
+            .unwrap();
+    }));
+    keys.push(Binding(b"\x1B[D", &|sender| {
+        // Left
+        sender
+            .send(ControllerMsg::AdjustTempo(-constants::TEMPO_ADJUST))
+            .unwrap();
+    }));
+
+    keys.push(Binding(b"q", &|sender| {
+        sender.send(ControllerMsg::Quit).unwrap();
+    }));
+
+    keys
+}
+
+// Possible states of the key binding engine.
+#[derive(PartialEq, Debug)]
+enum BindingState<'a> {
+    // The characters in the queue are not a valid key binding, nor
+    // are they the first part of valid key binding.
+    Invalid,
+
+    // The characters in the queue form the beginning of one or more
+    // keybindings, but we don't have a complete key binding yet.
+    Start,
+
+    // The characters in the queue are a perfect match for a key
+    // binding.
+    Complete(&'a Binding),
+}
+
+// Calculates the state of the key binding engine, given a set of
+// characters that have already been received.
+fn get_binding<'a>(queue: &[u8], bindings: &'a [Binding]) -> BindingState<'a> {
+    let mut is_prefix = false;
+    for b in bindings {
+        if b.0 == queue {
+            return BindingState::Complete(&b);
+        }
+
+        if b.0.starts_with(queue) {
+            is_prefix = true;
+        }
+    }
+
+    match is_prefix {
+        true => BindingState::Start,
+        false => BindingState::Invalid,
+    }
+}
+
+// Sets the terminal to raw mode, as is necessary for reading key
+// bindings from a terminal in real time.
+fn init_termios() -> Result<()> {
+    // TODO: revert termios at the end of the program.
+    // TODO: Windows compatibility -- Termios doesn't work on Windows.
+    let stdin_fd = stdin().as_raw_fd();
+    let mut t = termios::Termios::from_fd(stdin_fd).unwrap();
+    termios::cfmakeraw(&mut t);
+    termios::tcsetattr(stdin_fd, termios::TCSANOW, &t)?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn multichar_binding_test() {
+        let bindings = init_keybindings();
+
+        // Type in the left arrow key, character by character.
+        let mut left = vec![];
+        assert_eq!(get_binding(&left, &bindings), BindingState::Start);
+        left.push('\x1B' as u8);
+        assert_eq!(get_binding(&left, &bindings), BindingState::Start);
+        left.push(91 as u8);
+        assert_eq!(get_binding(&left, &bindings), BindingState::Start);
+        left.push('X' as u8);
+        assert_eq!(get_binding(&left, &bindings), BindingState::Invalid);
+        left.pop();
+        left.push('D' as u8);
+        match get_binding(&left, &bindings) {
+            BindingState::Complete(_) => (),
+            _ => panic!("Didn't recognize binding"),
+        };
     }
 }

@@ -17,6 +17,7 @@
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
 extern crate getopts;
+extern crate termios;
 pub mod beat_spec;
 pub mod config;
 pub mod constants;
@@ -28,6 +29,7 @@ use config::Config;
 use controller::run_controller;
 use metronome::do_metronome;
 use std::env;
+use std::io::{stderr, Write};
 use std::sync::mpsc::channel;
 use std::thread;
 
@@ -65,7 +67,10 @@ fn run() -> Result<()> {
     if let config::ConfigResult::Run(cfg) = cfg {
         let (send, recv) = channel();
         thread::spawn(move || {
-            run_controller(send).unwrap();
+            if let Err(e) = run_controller(send) {
+                write!(&mut stderr(), "{}", e).unwrap();
+                std::process::exit(1);
+            }
         });
         do_metronome(&cfg.rhythm, recv)?;
     }
