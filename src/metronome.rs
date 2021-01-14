@@ -19,6 +19,7 @@
 
 use crate::beat_spec::{BeatSpec, Event};
 use crate::constants;
+use crate::controller::cleanup_termios;
 use crate::controller::ControllerMsg;
 use crate::errors::*;
 use crate::sound::{beep, AudioConfig};
@@ -73,6 +74,7 @@ fn proc_cmd(cmd: ControllerMsg, vol: &mut f64, delay_mult: &mut f64) {
         ControllerMsg::Quit => {
             // Might want to make this work its way up the stack
             // instead -- wouldn't be too hard.
+            cleanup_termios().unwrap();
             std::process::exit(0);
         }
     }

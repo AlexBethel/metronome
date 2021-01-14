@@ -22,6 +22,7 @@ use std::fmt;
 use std::io::{stdin, Read};
 use std::os::unix::io::AsRawFd;
 use std::sync::mpsc::Sender;
+use termios::Termios;
 
 // Messages passed from the controller to the model, indicating user
 // requests.
@@ -144,6 +145,10 @@ fn init_keybindings() -> Vec<Binding> {
     keys.push(Binding(b"q", &|sender| {
         sender.send(ControllerMsg::Quit).unwrap();
     }));
+    keys.push(Binding(b"\x03", &|sender| {
+        // Control-C
+        sender.send(ControllerMsg::Quit).unwrap();
+    }));
 
     keys
 }
@@ -184,15 +189,34 @@ fn get_binding<'a>(queue: &[u8], bindings: &'a [Binding]) -> BindingState<'a> {
     }
 }
 
+// The Termios structure from the start of the program, which is
+// restored at the end of the program.
+static mut ORIG_TERMIOS: Option<Termios> = None;
+
 // Sets the terminal to raw mode, as is necessary for reading key
 // bindings from a terminal in real time.
 fn init_termios() -> Result<()> {
-    // TODO: revert termios at the end of the program.
     // TODO: Windows compatibility -- Termios doesn't work on Windows.
     let stdin_fd = stdin().as_raw_fd();
     let mut t = termios::Termios::from_fd(stdin_fd).unwrap();
+    unsafe {
+        ORIG_TERMIOS = Some(t.clone());
+    }
+
     termios::cfmakeraw(&mut t);
     termios::tcsetattr(stdin_fd, termios::TCSANOW, &t)?;
+    Ok(())
+}
+
+// Resets the terminal from raw mode.
+pub fn cleanup_termios() -> Result<()> {
+    unsafe {
+        if let Some(ref t) = ORIG_TERMIOS {
+            let stdin_fd = stdin().as_raw_fd();
+            termios::tcsetattr(stdin_fd, termios::TCSANOW, &t)?;
+        }
+    }
+
     Ok(())
 }
 
