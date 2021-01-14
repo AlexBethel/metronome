@@ -70,7 +70,6 @@ impl fmt::Debug for Binding {
 // Runs the controller, sending messages through the given channel.
 // Returns only on error.
 pub fn run_controller(sender: Sender<ControllerMsg>) -> Result<()> {
-    init_termios()?;
     let keys = init_keybindings();
     loop {
         // Read input in terms of keystrokes, which can consist of
@@ -189,33 +188,24 @@ fn get_binding<'a>(queue: &[u8], bindings: &'a [Binding]) -> BindingState<'a> {
     }
 }
 
-// The Termios structure from the start of the program, which is
-// restored at the end of the program.
-static mut ORIG_TERMIOS: Option<Termios> = None;
-
 // Sets the terminal to raw mode, as is necessary for reading key
-// bindings from a terminal in real time.
-fn init_termios() -> Result<()> {
+// bindings from a terminal in real time. Returns the original termios
+// state.
+pub fn init_termios() -> Result<Termios> {
     // TODO: Windows compatibility -- Termios doesn't work on Windows.
     let stdin_fd = stdin().as_raw_fd();
     let mut t = termios::Termios::from_fd(stdin_fd).unwrap();
-    unsafe {
-        ORIG_TERMIOS = Some(t.clone());
-    }
+    let orig_termios = t.clone();
 
     termios::cfmakeraw(&mut t);
     termios::tcsetattr(stdin_fd, termios::TCSANOW, &t)?;
-    Ok(())
+    Ok(orig_termios)
 }
 
-// Resets the terminal from raw mode.
-pub fn cleanup_termios() -> Result<()> {
-    unsafe {
-        if let Some(ref t) = ORIG_TERMIOS {
-            let stdin_fd = stdin().as_raw_fd();
-            termios::tcsetattr(stdin_fd, termios::TCSANOW, &t)?;
-        }
-    }
+// Resets the terminal from raw mode to the given initial state.
+pub fn cleanup_termios(orig: &Termios) -> Result<()> {
+    let stdin_fd = stdin().as_raw_fd();
+    termios::tcsetattr(stdin_fd, termios::TCSANOW, orig)?;
 
     Ok(())
 }

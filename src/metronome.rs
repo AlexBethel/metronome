@@ -19,7 +19,6 @@
 
 use crate::beat_spec::{BeatSpec, Event};
 use crate::constants;
-use crate::controller::cleanup_termios;
 use crate::controller::ControllerMsg;
 use crate::errors::*;
 use crate::sound::{beep, AudioConfig};
@@ -39,15 +38,27 @@ pub fn do_metronome(rhythm: &BeatSpec, controls: Receiver<ControllerMsg>) -> Res
         for tick in rhythm.get_ticks() {
             play_event(tick, &cfg, volume);
             for cmd in TimedReceiver::new(&controls, delay.mul_f64(delay_mult)) {
-                proc_cmd(cmd, &mut volume, &mut delay_mult);
+                if proc_cmd(cmd, &mut volume, &mut delay_mult) == CmdResult::Exit {
+                    return Ok(());
+                }
             }
         }
     }
 }
 
+// Possible results of a controller command.
+#[derive(PartialEq)]
+enum CmdResult {
+    // No further action
+    None,
+
+    // Exit the program.
+    Exit,
+}
+
 // Acts upon a command received from the controller. Adjusts the
 // volume and delay multipliers according to the user's request.
-fn proc_cmd(cmd: ControllerMsg, vol: &mut f64, delay_mult: &mut f64) {
+fn proc_cmd(cmd: ControllerMsg, vol: &mut f64, delay_mult: &mut f64) -> CmdResult {
     match cmd {
         ControllerMsg::Pause => {
             // TODO: Actually block until a new command is received.
@@ -72,10 +83,7 @@ fn proc_cmd(cmd: ControllerMsg, vol: &mut f64, delay_mult: &mut f64) {
             *delay_mult = *delay_mult / base.pow(x);
         }
         ControllerMsg::Quit => {
-            // Might want to make this work its way up the stack
-            // instead -- wouldn't be too hard.
-            cleanup_termios().unwrap();
-            std::process::exit(0);
+            return CmdResult::Exit;
         }
     }
 
@@ -85,6 +93,8 @@ fn proc_cmd(cmd: ControllerMsg, vol: &mut f64, delay_mult: &mut f64) {
     } else if *vol > 1.0 {
         *vol = 1.0;
     }
+
+    CmdResult::None
 }
 
 // Plays a single BeatSpec event with the given configuration and

@@ -32,6 +32,7 @@ use std::env;
 use std::io::{stderr, Write};
 use std::sync::mpsc::channel;
 use std::thread;
+use controller::{init_termios, cleanup_termios};
 
 use error_chain::{error_chain, quick_main};
 mod errors {
@@ -65,14 +66,17 @@ fn run() -> Result<()> {
 
     let cfg = Config::new(&args_ref)?;
     if let config::ConfigResult::Run(cfg) = cfg {
+        let termios = init_termios()?;
         let (send, recv) = channel();
         thread::spawn(move || {
             if let Err(e) = run_controller(send) {
+                cleanup_termios(&termios).unwrap();
                 write!(&mut stderr(), "{}", e).unwrap();
                 std::process::exit(1);
             }
         });
         do_metronome(&cfg.rhythm, recv)?;
+        cleanup_termios(&termios).unwrap();
     }
 
     Ok(())
