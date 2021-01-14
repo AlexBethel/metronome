@@ -27,12 +27,12 @@ pub mod sound;
 
 use config::Config;
 use controller::run_controller;
+use controller::{cleanup_termios, init_termios};
 use metronome::do_metronome;
 use std::env;
 use std::io::{stderr, Write};
 use std::sync::mpsc::channel;
 use std::thread;
-use controller::{init_termios, cleanup_termios};
 
 use error_chain::{error_chain, quick_main};
 mod errors {

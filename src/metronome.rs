@@ -37,9 +37,18 @@ pub fn do_metronome(rhythm: &BeatSpec, controls: Receiver<ControllerMsg>) -> Res
     loop {
         for tick in rhythm.get_ticks() {
             play_event(tick, &cfg, volume);
-            for cmd in TimedReceiver::new(&controls, delay.mul_f64(delay_mult)) {
-                if proc_cmd(cmd, &mut volume, &mut delay_mult) == CmdResult::Exit {
-                    return Ok(());
+            let mut tr = TimedReceiver::new(&controls, delay.mul_f64(delay_mult));
+            // for cmd in tr {
+            // FIXME: Can we still do this with a for loop somehow?
+            loop {
+                let cmd = match tr.next() {
+                    Some(x) => x,
+                    None => break,
+                };
+
+                match proc_cmd(cmd, &mut volume, &mut delay_mult, &mut tr) {
+                    CmdResult::Exit => return Ok(()),
+                    _ => {}
                 }
             }
         }
@@ -58,20 +67,21 @@ enum CmdResult {
 
 // Acts upon a command received from the controller. Adjusts the
 // volume and delay multipliers according to the user's request.
-fn proc_cmd(cmd: ControllerMsg, vol: &mut f64, delay_mult: &mut f64) -> CmdResult {
+fn proc_cmd<T>(
+    cmd: ControllerMsg,
+    vol: &mut f64,
+    delay_mult: &mut f64,
+    timer: &mut TimedReceiver<T>,
+) -> CmdResult {
     match cmd {
         ControllerMsg::Pause => {
-            // TODO: Actually block until a new command is received.
-            // For now, I'm just emulating roughly what it'll act like
-            // by toggling volume on and off.
-            *vol = 0.0;
+            timer.pause();
         }
         ControllerMsg::Play => {
-            *vol = constants::DEF_VOLUME;
+            timer.resume();
         }
         ControllerMsg::Toggle => {
-            // This is such a rough approximation lol
-            *vol = constants::DEF_VOLUME - *vol;
+            timer.toggle();
         }
         ControllerMsg::AdjustVolume(x) => {
             *vol = *vol + x;
@@ -137,6 +147,12 @@ struct TimedReceiver<'a, T> {
 
     // Source of the messages.
     channel: &'a Receiver<T>,
+
+    // Whether the timer is paused. While paused, the receiver listens
+    // forever rather than just until its timeout, and `duration` is
+    // set to the remaining duration on the timer; and as soon as it
+    // is resumed, start_time is set to the time of resumption.
+    paused: bool,
 }
 
 impl<'a, T> TimedReceiver<'a, T> {
@@ -145,6 +161,28 @@ impl<'a, T> TimedReceiver<'a, T> {
             start_time: Instant::now(),
             duration,
             channel,
+            paused: false,
+        }
+    }
+
+    // Pauses the timer on the receiver. It will listen forever when
+    // next invoked unless the resume() method is issued.
+    pub fn pause(&mut self) {
+        self.paused = true;
+        self.duration -= self.start_time.elapsed();
+    }
+
+    // Resumes a paused receiver.
+    pub fn resume(&mut self) {
+        self.paused = false;
+        self.start_time = Instant::now();
+    }
+
+    // Toggles a receiver between paused and resumed.
+    pub fn toggle(&mut self) {
+        match self.paused {
+            false => self.pause(),
+            true => self.resume(),
         }
     }
 }
@@ -153,6 +191,14 @@ impl<'a, T> Iterator for TimedReceiver<'a, T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.paused {
+            // Listen forever.
+            return match self.channel.recv() {
+                Ok(x) => Some(x),
+                Err(_) => None,
+            };
+        }
+
         let time = self.start_time.elapsed();
         if time > self.duration {
             // Timer expired, terminate the iterator.
