@@ -22,21 +22,34 @@ use crate::constants;
 use crate::controller::ControllerMsg;
 use crate::errors::*;
 use crate::sound::{beep, AudioConfig};
+use crate::view::ViewMsg;
 use num::traits::Pow;
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 use std::time::Instant;
 
 // Plays a ticking pattern with the given rhythm loop.
-pub fn do_metronome(rhythm: &BeatSpec, controls: Receiver<ControllerMsg>) -> Result<()> {
+pub fn do_metronome(
+    rhythm: &BeatSpec,
+    controls: Receiver<ControllerMsg>,
+    visuals: Sender<ViewMsg>,
+) -> Result<()> {
     let cfg = AudioConfig::new()?;
     let delay = get_delay(rhythm);
 
     let mut volume = constants::DEF_VOLUME;
     let mut delay_mult = 1.0;
     loop {
-        for tick in rhythm.get_ticks() {
+        let mut tick_num = 0;
+        let ticks = rhythm.get_ticks();
+        for tick in ticks {
             play_event(tick, &cfg, volume);
+
+            visuals
+                .send(ViewMsg::Progress(tick_num as f64 / ticks.len() as f64))
+                .unwrap();
+            tick_num += 1;
+
             let mut tr = TimedReceiver::new(&controls, delay.mul_f64(delay_mult));
             // for cmd in tr {
             // FIXME: Can we still do this with a for loop somehow?
@@ -47,7 +60,10 @@ pub fn do_metronome(rhythm: &BeatSpec, controls: Receiver<ControllerMsg>) -> Res
                 };
 
                 match proc_cmd(cmd, &mut volume, &mut delay_mult, &mut tr) {
-                    CmdResult::Exit => return Ok(()),
+                    CmdResult::Exit => {
+                        visuals.send(ViewMsg::Shutdown).unwrap();
+                        return Ok(());
+                    }
                     _ => {}
                 }
             }

@@ -24,6 +24,7 @@ pub mod constants;
 pub mod controller;
 pub mod metronome;
 pub mod sound;
+pub mod view;
 
 use config::Config;
 use controller::run_controller;
@@ -33,6 +34,7 @@ use std::env;
 use std::io::{stderr, Write};
 use std::sync::mpsc::channel;
 use std::thread;
+use view::run_view;
 
 use error_chain::{error_chain, quick_main};
 mod errors {
@@ -67,15 +69,22 @@ fn run() -> Result<()> {
     let cfg = Config::new(&args_ref)?;
     if let config::ConfigResult::Run(cfg) = cfg {
         let termios = init_termios()?;
-        let (send, recv) = channel();
+
+        let (view_send, view_recv) = channel();
         thread::spawn(move || {
-            if let Err(e) = run_controller(send) {
+            run_view(view_recv);
+        });
+
+        let (ctrl_send, ctrl_recv) = channel();
+        thread::spawn(move || {
+            if let Err(e) = run_controller(ctrl_send) {
                 cleanup_termios(&termios).unwrap();
                 write!(&mut stderr(), "{}", e).unwrap();
                 std::process::exit(1);
             }
         });
-        do_metronome(&cfg.rhythm, recv)?;
+
+        do_metronome(&cfg.rhythm, ctrl_recv, view_send)?;
         cleanup_termios(&termios).unwrap();
     }
 
