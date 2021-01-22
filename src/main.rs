@@ -70,7 +70,8 @@ fn run() -> Result<()> {
     if let config::ConfigResult::Run(cfg) = cfg {
         let termios = init_termios()?;
 
-        let view = ViewState::new();
+        let view =
+            ViewState::new(cfg.rhythm.get_ticks().len() as f64 / cfg.rhythm.get_beat_len() as f64);
 
         let (ctrl_send, ctrl_recv) = channel();
         thread::spawn(move || {

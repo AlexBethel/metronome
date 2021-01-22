@@ -32,38 +32,29 @@ pub struct ViewState {
     // Current progress through a measure, on a scale from 0 to 1.
     progress: f64,
 
-    // Whether we're going left or right. Alternates every measure.
-    direction: Direction,
-
     // The tempo in bpm.
     tempo: f64,
 
     // The volume from 0 to 1.
     volume: f64,
+
+    // The number of beats per measure.
+    beats_per_measure: f64,
 }
 
 impl ViewState {
-    pub fn new() -> Self {
+    pub fn new(beats_per_measure: f64) -> Self {
         Self {
             progress: 0.0,
-            direction: Direction::Right,
             tempo: constants::DEF_TEMPO,
             volume: constants::DEF_VOLUME,
+            beats_per_measure,
         }
     }
 
     // Sets the progress through the measure.
     pub fn set_progress(&mut self, progress: f64) {
         self.progress = progress;
-    }
-
-    // Skips to the next measure.
-    pub fn next_measure(&mut self) {
-        self.set_progress(0.0);
-        self.direction = match self.direction {
-            Direction::Left => Direction::Right,
-            Direction::Right => Direction::Left,
-        };
     }
 
     // Sets the tempo in beats per minute.
@@ -89,11 +80,7 @@ impl ViewState {
         indicator.reserve(constants::MEAS_INDIC_WIDTH as usize);
 
         let total_spaces = constants::MEAS_INDIC_WIDTH - 1;
-        let leading_spaces = (total_spaces as f64
-            * match self.direction {
-                Direction::Right => self.progress,
-                Direction::Left => 1.0 - self.progress,
-            }) as usize;
+        let leading_spaces = (total_spaces as f64 * self.progress_indicator_pos()) as usize;
         let trailing_spaces = total_spaces - leading_spaces;
 
         indicator.push_str(&" ".repeat(leading_spaces));
@@ -101,6 +88,24 @@ impl ViewState {
         indicator.push_str(&" ".repeat(trailing_spaces));
 
         indicator
+    }
+
+    // Calculates the position of the progress indicator, where 0 is
+    // the left side of the indicator and 1 is the right side.
+    fn progress_indicator_pos(&self) -> f64 {
+        let beat_fl = self.beats_per_measure * self.progress;
+        let n_beats = beat_fl as u32;
+        let dir = if n_beats % 2 == 0 {
+            Direction::Right
+        } else {
+            Direction::Left
+        };
+
+        let beat_progress = beat_fl % 1.0;
+        match dir {
+            Direction::Left => 1.0 - beat_progress,
+            Direction::Right => beat_progress,
+        }
     }
 
     // Visual indicator for the volume level.

@@ -68,7 +68,6 @@ pub fn do_metronome(
                 visuals.set_volume(volume);
             }
         }
-        visuals.next_measure();
     }
 }
 
