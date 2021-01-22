@@ -64,3 +64,11 @@ pub const VOL_ADJUST: f64 = 0.1;
 // or decrease button, in powers of two; that is, 1.0 doubles the
 // tempo and -1.0 halves the tempo.
 pub const TEMPO_ADJUST: f64 = 0.1;
+
+// ---- View options ----
+
+// Width of the tempo and volume indicators.
+pub const NUM_INDIC_WIDTH: usize = 3;
+
+// Width of the measure progress indicator.
+pub const MEAS_INDIC_WIDTH: usize = 40;

@@ -19,6 +19,7 @@
 use crate::constants;
 use std::io::{stdout, Write};
 use std::sync::mpsc::Receiver;
+use std::fmt::Display;
 
 // Runs the view thread.
 pub fn run_view(recv: Receiver<ViewMsg>) {
@@ -113,14 +114,56 @@ impl ViewState {
         self.volume = volume;
     }
 
+    // Visual indicator string for the tempo marking.
+    fn tempo_indicator(&self) -> String {
+        format!("{:1$}", self.tempo as u32, constants::NUM_INDIC_WIDTH)
+    }
+
+    // Visual indicator for the progress through the measure. In this
+    // implementation, we use an asterisk that bounces back and forth
+    // across the fixed-width indicator.
+    fn progress_indicator(&self) -> String {
+        let mut indicator = String::new();
+        indicator.reserve(constants::MEAS_INDIC_WIDTH as usize);
+
+        let total_spaces = constants::MEAS_INDIC_WIDTH - 1;
+        let leading_spaces = (total_spaces as f64
+                              * match self.direction {
+                                  Direction::Right => self.progress,
+                                  Direction::Left => 1.0 - self.progress
+                              }) as usize;
+        let trailing_spaces = total_spaces - leading_spaces;
+
+        indicator.push_str(&" ".repeat(leading_spaces));
+        indicator.push('*');
+        indicator.push_str(&" ".repeat(trailing_spaces));
+
+        indicator
+    }
+
+    // Visual indicator for the volume level.
+    fn volume_indicator(&self) -> String {
+        format!("{:1$}%", (self.volume * 100.0) as u32, constants::NUM_INDIC_WIDTH)
+    }
+
     // Draws the ViewState on the screen.
     pub fn draw(&self) {
         // Reset to the left edge of the screen, so as to draw over
         // whatever ViewState was there before.
         print!("\r");
 
-        // Temporary
-        print!("{} {} {}", self.progress, self.tempo, self.volume);
+        print!("{}", self);
+
         stdout().flush().unwrap();
+    }
+}
+
+impl Display for ViewState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
+           -> Result<(), std::fmt::Error> {
+        write!(f, "[{}] [{}] ({})",
+               self.tempo_indicator(),
+               self.progress_indicator(),
+               self.volume_indicator())
     }
 }

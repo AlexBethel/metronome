@@ -68,6 +68,10 @@ pub fn do_metronome(
                 }
             }
         }
+
+        visuals
+            .send(ViewMsg::Measure)
+            .unwrap();
     }
 }
 
