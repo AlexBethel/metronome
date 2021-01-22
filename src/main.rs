@@ -34,7 +34,7 @@ use std::env;
 use std::io::{stderr, Write};
 use std::sync::mpsc::channel;
 use std::thread;
-use view::run_view;
+use view::ViewState;
 
 use error_chain::{error_chain, quick_main};
 mod errors {
@@ -70,10 +70,7 @@ fn run() -> Result<()> {
     if let config::ConfigResult::Run(cfg) = cfg {
         let termios = init_termios()?;
 
-        let (view_send, view_recv) = channel();
-        thread::spawn(move || {
-            run_view(view_recv);
-        });
+        let view = ViewState::new();
 
         let (ctrl_send, ctrl_recv) = channel();
         thread::spawn(move || {
@@ -84,7 +81,7 @@ fn run() -> Result<()> {
             }
         });
 
-        do_metronome(&cfg.rhythm, ctrl_recv, view_send)?;
+        do_metronome(&cfg.rhythm, ctrl_recv, view)?;
         cleanup_termios(&termios).unwrap();
     }
 

@@ -19,44 +19,6 @@
 use crate::constants;
 use std::fmt::Display;
 use std::io::{stdout, Write};
-use std::sync::mpsc::Receiver;
-
-// Runs the view thread.
-pub fn run_view(recv: Receiver<ViewMsg>) {
-    let mut view_state = ViewState::new();
-    loop {
-        let msg = recv.recv().unwrap();
-        match msg {
-            ViewMsg::Progress(x) => view_state.set_progress(x),
-            ViewMsg::Measure => view_state.next_measure(),
-            ViewMsg::SetTempo(x) => view_state.set_tempo(x),
-            ViewMsg::SetVolume(x) => view_state.set_volume(x),
-            ViewMsg::Shutdown => return,
-        }
-
-        view_state.draw();
-    }
-}
-
-// Messages to the view subsystem.
-pub enum ViewMsg {
-    // Updates progress through a measure, on a scale from 0.0 to 1.0.
-    Progress(f64),
-
-    // Signals the end of a measure; implies Progress(0).
-    Measure,
-
-    // Sets a new tempo, equal to the given constant in beats per
-    // minute.
-    SetTempo(f64),
-
-    // Sets the metronome volume, on a scale from 0.0 to 1.0.
-    SetVolume(f64),
-
-    // Shuts down the view subsystem. To be called at the end of the
-    // program.
-    Shutdown,
-}
 
 // Direction of movement for the metronome indicator.
 enum Direction {
@@ -66,7 +28,7 @@ enum Direction {
 
 // State of the view module; this represents exactly which numbers and
 // indicators are visible on the screen.
-struct ViewState {
+pub struct ViewState {
     // Current progress through a measure, on a scale from 0 to 1.
     progress: f64,
 

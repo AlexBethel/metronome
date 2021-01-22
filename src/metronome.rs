@@ -22,8 +22,8 @@ use crate::constants;
 use crate::controller::ControllerMsg;
 use crate::errors::*;
 use crate::sound::{beep, AudioConfig};
-use crate::view::ViewMsg;
-use std::sync::mpsc::{Receiver, Sender};
+use crate::view::ViewState;
+use std::sync::mpsc::Receiver;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -31,7 +31,7 @@ use std::time::Instant;
 pub fn do_metronome(
     rhythm: &BeatSpec,
     controls: Receiver<ControllerMsg>,
-    visuals: Sender<ViewMsg>,
+    mut visuals: ViewState,
 ) -> Result<()> {
     let cfg = AudioConfig::new()?;
 
@@ -43,15 +43,14 @@ pub fn do_metronome(
         for tick in ticks {
             play_event(tick, &cfg, volume);
 
-            visuals
-                .send(ViewMsg::Progress(tick_num as f64 / ticks.len() as f64))
-                .unwrap();
+            visuals.set_progress(tick_num as f64 / ticks.len() as f64);
             tick_num += 1;
 
             let mut tr = TimedReceiver::new(&controls, get_delay(rhythm, tempo));
             // for cmd in tr {
             // FIXME: Can we still do this with a for loop somehow?
             loop {
+                visuals.draw();
                 let cmd = match tr.next() {
                     Some(x) => x,
                     None => break,
@@ -59,19 +58,17 @@ pub fn do_metronome(
 
                 match proc_cmd(cmd, &mut volume, &mut tempo, &mut tr) {
                     CmdResult::Exit => {
-                        visuals.send(ViewMsg::Shutdown).unwrap();
                         return Ok(());
                     }
                     _ => {}
                 }
 
                 // Send properties that might have updated.
-                visuals.send(ViewMsg::SetTempo(tempo)).unwrap();
-                visuals.send(ViewMsg::SetVolume(volume)).unwrap();
+                visuals.set_tempo(tempo);
+                visuals.set_volume(volume);
             }
         }
-
-        visuals.send(ViewMsg::Measure).unwrap();
+        visuals.next_measure();
     }
 }
 
