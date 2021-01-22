@@ -17,9 +17,9 @@
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::constants;
+use std::fmt::Display;
 use std::io::{stdout, Write};
 use std::sync::mpsc::Receiver;
-use std::fmt::Display;
 
 // Runs the view thread.
 pub fn run_view(recv: Receiver<ViewMsg>) {
@@ -128,10 +128,10 @@ impl ViewState {
 
         let total_spaces = constants::MEAS_INDIC_WIDTH - 1;
         let leading_spaces = (total_spaces as f64
-                              * match self.direction {
-                                  Direction::Right => self.progress,
-                                  Direction::Left => 1.0 - self.progress
-                              }) as usize;
+            * match self.direction {
+                Direction::Right => self.progress,
+                Direction::Left => 1.0 - self.progress,
+            }) as usize;
         let trailing_spaces = total_spaces - leading_spaces;
 
         indicator.push_str(&" ".repeat(leading_spaces));
@@ -143,7 +143,11 @@ impl ViewState {
 
     // Visual indicator for the volume level.
     fn volume_indicator(&self) -> String {
-        format!("{:1$}%", (self.volume * 100.0) as u32, constants::NUM_INDIC_WIDTH)
+        format!(
+            "{:1$}%",
+            (self.volume * 100.0) as u32,
+            constants::NUM_INDIC_WIDTH
+        )
     }
 
     // Draws the ViewState on the screen.
@@ -159,11 +163,13 @@ impl ViewState {
 }
 
 impl Display for ViewState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>)
-           -> Result<(), std::fmt::Error> {
-        write!(f, "[{}] [{}] ({})",
-               self.tempo_indicator(),
-               self.progress_indicator(),
-               self.volume_indicator())
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "[{}] [{}] ({})",
+            self.tempo_indicator(),
+            self.progress_indicator(),
+            self.volume_indicator()
+        )
     }
 }

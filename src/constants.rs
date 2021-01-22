@@ -61,9 +61,8 @@ pub const BEEP_PITCH: f64 = 880.0;
 pub const VOL_ADJUST: f64 = 0.1;
 
 // Measure by which tempo is adjusted per press of the tempo increase
-// or decrease button, in powers of two; that is, 1.0 doubles the
-// tempo and -1.0 halves the tempo.
-pub const TEMPO_ADJUST: f64 = 0.1;
+// or decrease button, in beats per minute.
+pub const TEMPO_ADJUST: f64 = 1.0;
 
 // ---- View options ----
 

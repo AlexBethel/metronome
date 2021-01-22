@@ -23,7 +23,6 @@ use crate::controller::ControllerMsg;
 use crate::errors::*;
 use crate::sound::{beep, AudioConfig};
 use crate::view::ViewMsg;
-use num::traits::Pow;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 use std::time::Instant;
@@ -35,10 +34,9 @@ pub fn do_metronome(
     visuals: Sender<ViewMsg>,
 ) -> Result<()> {
     let cfg = AudioConfig::new()?;
-    let delay = get_delay(rhythm);
 
     let mut volume = constants::DEF_VOLUME;
-    let mut delay_mult = 1.0;
+    let mut tempo = rhythm.get_tempo();
     loop {
         let mut tick_num = 0;
         let ticks = rhythm.get_ticks();
@@ -50,7 +48,7 @@ pub fn do_metronome(
                 .unwrap();
             tick_num += 1;
 
-            let mut tr = TimedReceiver::new(&controls, delay.mul_f64(delay_mult));
+            let mut tr = TimedReceiver::new(&controls, get_delay(rhythm, tempo));
             // for cmd in tr {
             // FIXME: Can we still do this with a for loop somehow?
             loop {
@@ -59,7 +57,7 @@ pub fn do_metronome(
                     None => break,
                 };
 
-                match proc_cmd(cmd, &mut volume, &mut delay_mult, &mut tr) {
+                match proc_cmd(cmd, &mut volume, &mut tempo, &mut tr) {
                     CmdResult::Exit => {
                         visuals.send(ViewMsg::Shutdown).unwrap();
                         return Ok(());
@@ -69,9 +67,7 @@ pub fn do_metronome(
             }
         }
 
-        visuals
-            .send(ViewMsg::Measure)
-            .unwrap();
+        visuals.send(ViewMsg::Measure).unwrap();
     }
 }
 
@@ -90,7 +86,7 @@ enum CmdResult {
 fn proc_cmd<T>(
     cmd: ControllerMsg,
     vol: &mut f64,
-    delay_mult: &mut f64,
+    tempo: &mut f64,
     timer: &mut TimedReceiver<T>,
 ) -> CmdResult {
     match cmd {
@@ -107,10 +103,7 @@ fn proc_cmd<T>(
             *vol = *vol + x;
         }
         ControllerMsg::AdjustTempo(x) => {
-            let base: f64 = 2.0;
-            // Divide, since a delay multiplier (internal) is inverse
-            // to the tempo (what the user sees).
-            *delay_mult = *delay_mult / base.pow(x);
+            *tempo = *tempo + x;
         }
         ControllerMsg::Quit => {
             return CmdResult::Exit;
@@ -142,8 +135,8 @@ fn play_event(evt: &Event, cfg: &AudioConfig, vol: f64) {
 }
 
 // Gets the time delay between two ticks of the given BeatSpec.
-fn get_delay(bs: &BeatSpec) -> Duration {
-    let beat_time = 60.0 / bs.get_tempo();
+fn get_delay(bs: &BeatSpec, tempo: f64) -> Duration {
+    let beat_time = 60.0 / tempo;
     let tick_time = beat_time / bs.get_beat_len() as f64;
 
     seconds(tick_time)
@@ -249,7 +242,10 @@ mod tests {
             }
         };
 
-        assert_eq!(get_delay(&cfg.rhythm), seconds(60.0 / 72.0 / 3.0));
+        assert_eq!(
+            get_delay(&cfg.rhythm, cfg.rhythm.get_tempo()),
+            seconds(60.0 / 72.0 / 3.0)
+        );
     }
 
     #[test]

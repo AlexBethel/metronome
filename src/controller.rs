@@ -43,8 +43,7 @@ pub enum ControllerMsg {
     // from 0.0 to 1.0).
     AdjustVolume(f64),
 
-    // Increase the tempo by the given logarithmic measure, where 1.0
-    // doubles the tempo and -1.0 halves it.
+    // Increase the tempo by the given number of beats per measure.
     AdjustTempo(f64),
 
     // Exits the program.
