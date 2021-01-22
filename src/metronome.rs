@@ -64,6 +64,10 @@ pub fn do_metronome(
                     }
                     _ => {}
                 }
+
+                // Send properties that might have updated.
+                visuals.send(ViewMsg::SetTempo(tempo)).unwrap();
+                visuals.send(ViewMsg::SetVolume(volume)).unwrap();
             }
         }
 
