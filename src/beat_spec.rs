@@ -143,7 +143,7 @@ impl BeatSpec {
                 v
             },
             beat_len: self.beat_len * factor,
-            tempo: self.tempo
+            tempo: self.tempo,
         }
     }
 
