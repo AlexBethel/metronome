@@ -41,6 +41,8 @@ pub fn do_metronome(
 
     let mut volume = constants::DEF_VOLUME;
     let mut tempo = rhythm.get_tempo();
+    visuals.set_tempo(tempo);
+    visuals.set_volume(volume);
     loop {
         let mut tick_num = 0;
         let ticks = rhythm.get_ticks();
