@@ -35,7 +35,7 @@ pub struct BeatSpec {
 }
 
 // Different types of events that can occur in a measure.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Event {
     // Do nothing during this tick.
     Rest,
@@ -119,6 +119,32 @@ impl BeatSpec {
             beat_len,
             tempo,
         })
+    }
+
+    // Constructs a BeatSpec with the same content as this one, but
+    // subdivided to be divisible by the given integer. E.g., given a
+    // 4/4 measure of quarter notes and the parameter 8, this returns
+    // an 8/8 measure with rests on the off-beats, which sounds
+    // exactly the same as the 4/4 measure.
+    pub fn make_divisible(&self, value: u32) -> BeatSpec {
+        let n_ticks = self.beat_len as u32;
+        let factor = value / euclid(n_ticks, value);
+
+        BeatSpec {
+            ticks: {
+                let mut v = Vec::new();
+                v.reserve((n_ticks * factor) as usize);
+                for b in self.ticks.iter() {
+                    v.push(b.clone());
+                    for _ in 1..factor {
+                        v.push(Event::Rest);
+                    }
+                }
+                v
+            },
+            beat_len: self.beat_len * factor,
+            tempo: self.tempo
+        }
     }
 
     // Accessor functions

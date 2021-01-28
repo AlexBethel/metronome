@@ -35,6 +35,10 @@ pub fn do_metronome(
 ) -> Result<()> {
     let cfg = AudioConfig::new()?;
 
+    // Make the rhythm amenable to being displayed in the measure
+    // indicator view.
+    let rhythm = rhythm.make_divisible(constants::MEAS_INDIC_WIDTH as u32);
+
     let mut volume = constants::DEF_VOLUME;
     let mut tempo = rhythm.get_tempo();
     loop {
@@ -46,9 +50,7 @@ pub fn do_metronome(
             visuals.set_progress(tick_num as f64 / ticks.len() as f64);
             tick_num += 1;
 
-            let mut tr = TimedReceiver::new(&controls, get_delay(rhythm, tempo));
-            // for cmd in tr {
-            // FIXME: Can we still do this with a for loop somehow?
+            let mut tr = TimedReceiver::new(&controls, get_delay(&rhythm, tempo));
             loop {
                 visuals.draw();
                 let cmd = match tr.next() {
