@@ -81,10 +81,7 @@ key bindings are:
 * Right: Increase tempo
 * Left: Decrease tempo
 * "q": Quit
-
-TODO: Add more controls. It should be possible to:
-* Set the tempo to an arbitrary number.
-* Tap a key at a specific tempo, and have the metronome automatically
-  match the tempo you tap at.
-
-TODO: Add visual indicators.
+* "g": Prompts for a tempo, and sets the metronome's tempo
+  accordingly. (Not yet implemented.)
+* ",": Enter "tap" mode. Pressing this key repeatedly causes the
+  metronome to match the tempo you tap at. (Not yet implemented.)
