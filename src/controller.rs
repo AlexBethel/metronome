@@ -1,4 +1,4 @@
-// Interactive controls of the user interface.
+// Interactive controls of the Metronome user interface.
 // Copyright (c) 2021 by Alexander Bethel.
 
 // This file is part of Metronome.
@@ -17,12 +17,7 @@
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::constants;
-use crate::errors::*;
 use std::fmt;
-use std::io::{stdin, Read};
-use std::os::unix::io::AsRawFd;
-use std::sync::mpsc::Sender;
-use termios::Termios;
 
 // Messages passed from the controller to the model, indicating user
 // requests.
@@ -50,9 +45,48 @@ pub enum ControllerMsg {
     Quit,
 }
 
+pub struct ControllerState {
+    // The mapping from key events to commands.
+    mapping: Vec<Binding>,
+
+    // Partial key combination entered. This is only used for parsing
+    // multi-byte escape codes at the moment, and should not be used
+    // for actual series of keystrokes (a la Emacs).
+    partial: Vec<u8>,
+}
+
+impl ControllerState {
+    // Creates a new ControllerState.
+    pub fn new() -> ControllerState {
+        ControllerState {
+            mapping: init_keybindings(),
+            partial: vec![],
+        }
+    }
+
+    // Sends a byte received from the keyboard to the controller,
+    // which processes it according to the keymap and may or may not
+    // produce a message directing what to do.
+    pub fn send(&mut self, key: u8) -> Option<ControllerMsg> {
+        self.partial.push(key);
+        match get_binding(&self.partial, &self.mapping) {
+            BindingState::Invalid => {
+                println!("Invalid\r");
+                self.partial = vec![];
+                None
+            }
+            BindingState::Start => None,
+            BindingState::Complete(b) => {
+                self.partial = vec![];
+                b.1()
+            }
+        }
+    }
+}
+
 // A mapping from a key (represented as a set of characters, [u8]) to
 // some functionality.
-struct Binding(&'static [u8], &'static dyn Fn(&Sender<ControllerMsg>) -> ());
+struct Binding(&'static [u8], &'static dyn Fn() -> Option<ControllerMsg>);
 
 impl PartialEq for Binding {
     fn eq(&self, other: &Self) -> bool {
@@ -66,86 +100,36 @@ impl fmt::Debug for Binding {
     }
 }
 
-// Runs the controller, sending messages through the given channel.
-// Returns only on error.
-pub fn run_controller(sender: Sender<ControllerMsg>) -> Result<()> {
-    let keys = init_keybindings();
-    loop {
-        // Read input in terms of keystrokes, which can consist of
-        // multiple characters (e.g. arrow keys, which are represented
-        // as an escape sequence).
-        let mut keystroke = vec![];
-        loop {
-            // println!("{:?}\r", keystroke);
-            let mut buf = vec![0];
-            stdin().read_exact(&mut buf)?;
-            // println!("Just got {}\r", buf[0] as u8);
-            keystroke.push(buf[0]);
-
-            match get_binding(&keystroke, &keys) {
-                BindingState::Invalid => {
-                    // println!("Invalid\r");
-                    break;
-                }
-                BindingState::Start => {
-                    // println!("Start\r");
-                }
-                BindingState::Complete(b) => {
-                    // println!("Complete\r");
-                    b.1(&sender);
-                    break;
-                }
-            }
-        }
-    }
-}
-
 // Sets up the vector of key mapings used by the program.
 fn init_keybindings() -> Vec<Binding> {
     // TODO: Clean this up with a helper function of some sort.
     let mut keys = vec![];
-    keys.push(Binding(b"p", &|sender| {
-        sender.send(ControllerMsg::Pause).unwrap();
-    }));
-    keys.push(Binding(b"P", &|sender| {
-        sender.send(ControllerMsg::Play).unwrap();
-    }));
-    keys.push(Binding(b" ", &|sender| {
-        sender.send(ControllerMsg::Toggle).unwrap();
-    }));
+    keys.push(Binding(b"p", &|| Some(ControllerMsg::Pause)));
+    keys.push(Binding(b"P", &|| Some(ControllerMsg::Play)));
+    keys.push(Binding(b" ", &|| Some(ControllerMsg::Toggle)));
 
     // Arrow keys
-    keys.push(Binding(b"\x1B[A", &|sender| {
+    keys.push(Binding(b"\x1B[A", &|| {
         // Up
-        sender
-            .send(ControllerMsg::AdjustVolume(constants::VOL_ADJUST))
-            .unwrap();
+        Some(ControllerMsg::AdjustVolume(constants::VOL_ADJUST))
     }));
-    keys.push(Binding(b"\x1B[B", &|sender| {
+    keys.push(Binding(b"\x1B[B", &|| {
         // Down
-        sender
-            .send(ControllerMsg::AdjustVolume(-constants::VOL_ADJUST))
-            .unwrap();
+        Some(ControllerMsg::AdjustVolume(-constants::VOL_ADJUST))
     }));
-    keys.push(Binding(b"\x1B[C", &|sender| {
+    keys.push(Binding(b"\x1B[C", &|| {
         // Right
-        sender
-            .send(ControllerMsg::AdjustTempo(constants::TEMPO_ADJUST))
-            .unwrap();
+        Some(ControllerMsg::AdjustTempo(constants::TEMPO_ADJUST))
     }));
-    keys.push(Binding(b"\x1B[D", &|sender| {
+    keys.push(Binding(b"\x1B[D", &|| {
         // Left
-        sender
-            .send(ControllerMsg::AdjustTempo(-constants::TEMPO_ADJUST))
-            .unwrap();
+        Some(ControllerMsg::AdjustTempo(-constants::TEMPO_ADJUST))
     }));
 
-    keys.push(Binding(b"q", &|sender| {
-        sender.send(ControllerMsg::Quit).unwrap();
-    }));
-    keys.push(Binding(b"\x03", &|sender| {
+    keys.push(Binding(b"q", &|| Some(ControllerMsg::Quit)));
+    keys.push(Binding(b"\x03", &|| {
         // Control-C
-        sender.send(ControllerMsg::Quit).unwrap();
+        Some(ControllerMsg::Quit)
     }));
 
     keys
@@ -185,28 +169,6 @@ fn get_binding<'a>(queue: &[u8], bindings: &'a [Binding]) -> BindingState<'a> {
         true => BindingState::Start,
         false => BindingState::Invalid,
     }
-}
-
-// Sets the terminal to raw mode, as is necessary for reading key
-// bindings from a terminal in real time. Returns the original termios
-// state.
-pub fn init_termios() -> Result<Termios> {
-    // TODO: Windows compatibility -- Termios doesn't work on Windows.
-    let stdin_fd = stdin().as_raw_fd();
-    let mut t = termios::Termios::from_fd(stdin_fd).unwrap();
-    let orig_termios = t.clone();
-
-    termios::cfmakeraw(&mut t);
-    termios::tcsetattr(stdin_fd, termios::TCSANOW, &t)?;
-    Ok(orig_termios)
-}
-
-// Resets the terminal from raw mode to the given initial state.
-pub fn cleanup_termios(orig: &Termios) -> Result<()> {
-    let stdin_fd = stdin().as_raw_fd();
-    termios::tcsetattr(stdin_fd, termios::TCSANOW, orig)?;
-
-    Ok(())
 }
 
 #[cfg(test)]

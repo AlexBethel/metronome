@@ -18,6 +18,7 @@
 
 extern crate getopts;
 extern crate termios;
+pub mod app_state;
 pub mod beat_spec;
 pub mod config;
 pub mod constants;
@@ -26,15 +27,13 @@ pub mod metronome;
 pub mod sound;
 pub mod view;
 
+use app_state::state_loop;
 use config::Config;
-use controller::run_controller;
-use controller::{cleanup_termios, init_termios};
-use metronome::do_metronome;
+use metronome::MetronomeState;
 use std::env;
-use std::io::{stderr, Write};
-use std::sync::mpsc::channel;
-use std::thread;
-use view::ViewState;
+use std::io::stdin;
+use std::os::unix::io::AsRawFd;
+use termios::Termios;
 
 use error_chain::{error_chain, quick_main};
 mod errors {
@@ -46,6 +45,8 @@ mod errors {
             ParseIntError(::std::num::ParseIntError);
             SupportedStreamConfigsError(::cpal::SupportedStreamConfigsError);
             IOError(::std::io::Error);
+            RecvError(::std::sync::mpsc::RecvError);
+            RecvTimeoutError(::std::sync::mpsc::RecvTimeoutError);
         }
 
         errors {
@@ -56,6 +57,7 @@ mod errors {
         }
     }
 }
+
 use errors::*;
 
 quick_main!(run);
@@ -69,22 +71,34 @@ fn run() -> Result<()> {
     let cfg = Config::new(&args_ref)?;
     if let config::ConfigResult::Run(cfg) = cfg {
         let termios = init_termios()?;
+        let init_state = MetronomeState::new(&cfg.rhythm)?;
 
-        let view =
-            ViewState::new(cfg.rhythm.get_ticks().len() as f64 / cfg.rhythm.get_beat_len() as f64);
-
-        let (ctrl_send, ctrl_recv) = channel();
-        thread::spawn(move || {
-            if let Err(e) = run_controller(ctrl_send) {
-                cleanup_termios(&termios).unwrap();
-                write!(&mut stderr(), "{}", e).unwrap();
-                std::process::exit(1);
-            }
-        });
-
-        do_metronome(&cfg.rhythm, ctrl_recv, view)?;
+        let s = state_loop(Box::new(init_state));
         cleanup_termios(&termios).unwrap();
+        return s;
     }
+
+    Ok(())
+}
+
+// Sets the terminal to raw mode, as is necessary for reading key
+// bindings from a terminal in real time. Returns the original termios
+// state.
+pub fn init_termios() -> Result<Termios> {
+    // TODO: Windows compatibility -- Termios doesn't work on Windows.
+    let stdin_fd = stdin().as_raw_fd();
+    let mut t = termios::Termios::from_fd(stdin_fd).unwrap();
+    let orig_termios = t.clone();
+
+    termios::cfmakeraw(&mut t);
+    termios::tcsetattr(stdin_fd, termios::TCSANOW, &t)?;
+    Ok(orig_termios)
+}
+
+// Resets the terminal from raw mode to the given initial state.
+pub fn cleanup_termios(orig: &Termios) -> Result<()> {
+    let stdin_fd = stdin().as_raw_fd();
+    termios::tcsetattr(stdin_fd, termios::TCSANOW, orig)?;
 
     Ok(())
 }

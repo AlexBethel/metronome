@@ -60,9 +60,17 @@ pub const BEEP_PITCH: f64 = 880.0;
 // and 1.0 is max volume.
 pub const VOL_ADJUST: f64 = 0.1;
 
+// Volumen minimum and maximum.
+pub const VOL_MIN: f64 = 0.0;
+pub const VOL_MAX: f64 = 1.0;
+
 // Measure by which tempo is adjusted per press of the tempo increase
 // or decrease button, in beats per minute.
 pub const TEMPO_ADJUST: f64 = 1.0;
+
+// Tempo minimum and maximum.
+pub const TEMPO_MIN: f64 = 10.0;
+pub const TEMPO_MAX: f64 = 300.0;
 
 // ---- View options ----
 

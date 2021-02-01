@@ -17,111 +17,107 @@
 // You should have received a copy of the GNU General Public License
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::app_state::{AppState, Keycode, StateTransition, TickCommand};
 use crate::beat_spec::{BeatSpec, Event};
 use crate::constants;
-use crate::controller::ControllerMsg;
+use crate::controller::{ControllerMsg, ControllerState};
 use crate::errors::*;
 use crate::sound::{beep, AudioConfig};
 use crate::view::ViewState;
-use std::sync::mpsc::Receiver;
 use std::time::Duration;
-use std::time::Instant;
 
-// Plays a ticking pattern with the given rhythm loop.
-pub fn do_metronome(
-    rhythm: &BeatSpec,
-    controls: Receiver<ControllerMsg>,
-    mut visuals: ViewState,
-) -> Result<()> {
-    let cfg = AudioConfig::new()?;
+// State of the metronome at any given time.
+pub struct MetronomeState {
+    // The rhythm the metronome is beating out.
+    rhythm: BeatSpec,
 
-    // Make the rhythm amenable to being displayed in the measure
-    // indicator view.
-    let rhythm = rhythm.make_divisible(constants::MEAS_INDIC_WIDTH as u32);
+    // The index of the next tick to be played by the metronome.
+    tick_number: usize,
 
-    let mut volume = constants::DEF_VOLUME;
-    let mut tempo = rhythm.get_tempo();
-    visuals.set_tempo(tempo);
-    visuals.set_volume(volume);
-    loop {
-        let mut tick_num = 0;
-        let ticks = rhythm.get_ticks();
-        for tick in ticks {
-            play_event(tick, &cfg, volume);
+    // The audio device configuration.
+    cfg: AudioConfig,
 
-            visuals.set_progress(tick_num as f64 / ticks.len() as f64);
-            tick_num += 1;
+    // The current volume and tempo settings.
+    volume: f64,
+    tempo: f64,
 
-            let mut tr = TimedReceiver::new(&controls, get_delay(&rhythm, tempo));
-            loop {
-                visuals.draw();
-                let cmd = match tr.next() {
-                    Some(x) => x,
-                    None => break,
-                };
+    // State of the view and controller subsystems.
+    view: ViewState,
+    controller: ControllerState,
+}
 
-                match proc_cmd(cmd, &mut volume, &mut tempo, &mut tr) {
-                    CmdResult::Exit => {
-                        return Ok(());
+impl MetronomeState {
+    pub fn new(rhythm: &BeatSpec) -> Result<MetronomeState> {
+        Ok(MetronomeState {
+            rhythm: rhythm.make_divisible(constants::MEAS_INDIC_WIDTH as u32),
+            tick_number: 0,
+            cfg: AudioConfig::new()?,
+            volume: constants::DEF_VOLUME,
+            tempo: rhythm.get_tempo(),
+            view: ViewState::new(rhythm.get_ticks().len() as f64 / rhythm.get_beat_len() as f64),
+            controller: ControllerState::new(),
+        })
+    }
+}
+
+impl AppState for MetronomeState {
+    fn tick(&mut self) -> (StateTransition, TickCommand) {
+        let ticks = &self.rhythm.get_ticks();
+        let tick = &ticks[self.tick_number];
+        play_event(tick, &self.cfg, self.volume);
+
+        self.view
+            .set_progress(self.tick_number as f64 / ticks.len() as f64);
+        self.view.set_tempo(self.tempo);
+        self.view.set_volume(self.volume);
+        self.view.draw();
+
+        self.tick_number = (self.tick_number + 1) % ticks.len();
+
+        (
+            StateTransition::NoChange,
+            TickCommand::Set(get_delay(&self.rhythm, self.tempo)),
+        )
+    }
+
+    fn keypress(&mut self, key: Keycode, _time: Duration) -> (StateTransition, TickCommand) {
+        let cmd = if let Keycode::Key(key) = key {
+            self.controller.send(key)
+        } else {
+            // stdin closed, quit the program.
+            return (StateTransition::Exit, TickCommand::None);
+        };
+
+        if let Some(cmd) = cmd {
+            return match cmd {
+                ControllerMsg::Pause => (StateTransition::NoChange, TickCommand::Pause),
+                ControllerMsg::Play => (StateTransition::NoChange, TickCommand::Resume),
+                ControllerMsg::Toggle => (StateTransition::NoChange, TickCommand::Toggle),
+                ControllerMsg::AdjustVolume(x) => {
+                    self.volume += x;
+                    if self.volume < 0.0 {
+                        self.volume = 0.0;
+                    } else if self.volume > 1.0 {
+                        self.volume = 1.0;
                     }
-                    _ => {}
+
+                    (StateTransition::NoChange, TickCommand::None)
                 }
-
-                // Send properties that might have updated.
-                visuals.set_tempo(tempo);
-                visuals.set_volume(volume);
-            }
+                ControllerMsg::AdjustTempo(x) => {
+                    self.tempo += x;
+                    if self.tempo < constants::TEMPO_MIN {
+                        self.tempo = constants::TEMPO_MIN;
+                    } else if self.tempo > constants::TEMPO_MAX {
+                        self.tempo = constants::TEMPO_MAX;
+                    }
+                    (StateTransition::NoChange, TickCommand::None)
+                }
+                ControllerMsg::Quit => (StateTransition::Exit, TickCommand::None),
+            };
+        } else {
+            (StateTransition::NoChange, TickCommand::None)
         }
     }
-}
-
-// Possible results of a controller command.
-#[derive(PartialEq)]
-enum CmdResult {
-    // No further action
-    None,
-
-    // Exit the program.
-    Exit,
-}
-
-// Acts upon a command received from the controller. Adjusts the
-// volume and delay multipliers according to the user's request.
-fn proc_cmd<T>(
-    cmd: ControllerMsg,
-    vol: &mut f64,
-    tempo: &mut f64,
-    timer: &mut TimedReceiver<T>,
-) -> CmdResult {
-    match cmd {
-        ControllerMsg::Pause => {
-            timer.pause();
-        }
-        ControllerMsg::Play => {
-            timer.resume();
-        }
-        ControllerMsg::Toggle => {
-            timer.toggle();
-        }
-        ControllerMsg::AdjustVolume(x) => {
-            *vol = *vol + x;
-        }
-        ControllerMsg::AdjustTempo(x) => {
-            *tempo = *tempo + x;
-        }
-        ControllerMsg::Quit => {
-            return CmdResult::Exit;
-        }
-    }
-
-    // Bounds check.
-    if *vol < 0.0 {
-        *vol = 0.0;
-    } else if *vol > 1.0 {
-        *vol = 1.0;
-    }
-
-    CmdResult::None
 }
 
 // Plays a single BeatSpec event with the given configuration and
@@ -153,107 +149,4 @@ fn seconds(secs: f64) -> Duration {
     let ns = (remainder * 1_000_000_000.0) as u64;
 
     Duration::from_secs(s) + Duration::from_nanos(ns)
-}
-
-// Iterator over messages received from a channel over a specific
-// period of time.
-struct TimedReceiver<'a, T> {
-    // Start and duration of the time frame.
-    start_time: Instant,
-    duration: Duration,
-
-    // Source of the messages.
-    channel: &'a Receiver<T>,
-
-    // Whether the timer is paused. While paused, the receiver listens
-    // forever rather than just until its timeout, and `duration` is
-    // set to the remaining duration on the timer; and as soon as it
-    // is resumed, start_time is set to the time of resumption.
-    paused: bool,
-}
-
-impl<'a, T> TimedReceiver<'a, T> {
-    pub fn new(channel: &'a Receiver<T>, duration: Duration) -> Self {
-        TimedReceiver {
-            start_time: Instant::now(),
-            duration,
-            channel,
-            paused: false,
-        }
-    }
-
-    // Pauses the timer on the receiver. It will listen forever when
-    // next invoked unless the resume() method is issued.
-    pub fn pause(&mut self) {
-        self.paused = true;
-        self.duration -= self.start_time.elapsed();
-    }
-
-    // Resumes a paused receiver.
-    pub fn resume(&mut self) {
-        self.paused = false;
-        self.start_time = Instant::now();
-    }
-
-    // Toggles a receiver between paused and resumed.
-    pub fn toggle(&mut self) {
-        match self.paused {
-            false => self.pause(),
-            true => self.resume(),
-        }
-    }
-}
-
-impl<'a, T> Iterator for TimedReceiver<'a, T> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.paused {
-            // Listen forever.
-            return match self.channel.recv() {
-                Ok(x) => Some(x),
-                Err(_) => None,
-            };
-        }
-
-        let time = self.start_time.elapsed();
-        if time > self.duration {
-            // Timer expired, terminate the iterator.
-            return None;
-        }
-
-        match self.channel.recv_timeout(self.duration - time) {
-            Ok(x) => Some(x),
-            // FIXME: This doesn't differentiate the other end hanging
-            // up from the timer expiring; need to catch that error
-            // specifically and propagate it.
-            Err(_) => None,
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::config::{Config, ConfigResult};
-
-    #[test]
-    fn delay_test() {
-        let cfg = match Config::new(&vec!["foo", "72:4:3"]).unwrap() {
-            ConfigResult::Run(x) => x,
-            ConfigResult::DontRun => {
-                panic!("Got DontRun");
-            }
-        };
-
-        assert_eq!(
-            get_delay(&cfg.rhythm, cfg.rhythm.get_tempo()),
-            seconds(60.0 / 72.0 / 3.0)
-        );
-    }
-
-    #[test]
-    fn seconds_test() {
-        assert_eq!(seconds(5.5), Duration::from_millis(5500));
-    }
 }
