@@ -25,15 +25,14 @@ pub mod constants;
 pub mod controller;
 pub mod metronome;
 pub mod sound;
+pub mod termios_handler;
 pub mod view;
 
 use app_state::state_loop;
 use config::Config;
 use metronome::MetronomeState;
 use std::env;
-use std::io::stdin;
-use std::os::unix::io::AsRawFd;
-use termios::Termios;
+use termios_handler::TermiosHandler;
 
 use error_chain::{error_chain, quick_main};
 mod errors {
@@ -70,35 +69,13 @@ fn run() -> Result<()> {
 
     let cfg = Config::new(&args_ref)?;
     if let config::ConfigResult::Run(cfg) = cfg {
-        let termios = init_termios()?;
+        let termios = TermiosHandler::set_stdin_raw()?;
         let init_state = MetronomeState::new(&cfg.rhythm)?;
 
         let s = state_loop(Box::new(init_state));
-        cleanup_termios(&termios).unwrap();
+        drop(termios);
         return s;
     }
-
-    Ok(())
-}
-
-// Sets the terminal to raw mode, as is necessary for reading key
-// bindings from a terminal in real time. Returns the original termios
-// state.
-pub fn init_termios() -> Result<Termios> {
-    // TODO: Windows compatibility -- Termios doesn't work on Windows.
-    let stdin_fd = stdin().as_raw_fd();
-    let mut t = termios::Termios::from_fd(stdin_fd).unwrap();
-    let orig_termios = t.clone();
-
-    termios::cfmakeraw(&mut t);
-    termios::tcsetattr(stdin_fd, termios::TCSANOW, &t)?;
-    Ok(orig_termios)
-}
-
-// Resets the terminal from raw mode to the given initial state.
-pub fn cleanup_termios(orig: &Termios) -> Result<()> {
-    let stdin_fd = stdin().as_raw_fd();
-    termios::tcsetattr(stdin_fd, termios::TCSANOW, orig)?;
 
     Ok(())
 }
