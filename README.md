@@ -84,6 +84,6 @@ key bindings are:
 * "g": Prompts for a tempo, and sets the metronome's tempo
   accordingly. (Not yet implemented.)
 * ".": Immediately synchronizes the metronome such that a measure
-  begins the instant the key was pressed.
+  begins the instant the key was pressed. (Not yet implemented.)
 * ",": Enter "tap" mode. Pressing this key repeatedly causes the
   metronome to match the tempo you tap at. (Not yet implemented.)

@@ -101,6 +101,9 @@ impl AppState for MetronomeState {
                         self.volume = 1.0;
                     }
 
+                    self.view.set_volume(self.volume);
+                    self.view.draw();
+
                     (StateTransition::NoChange, TickCommand::None)
                 }
                 ControllerMsg::AdjustTempo(x) => {
@@ -110,6 +113,10 @@ impl AppState for MetronomeState {
                     } else if self.tempo > constants::TEMPO_MAX {
                         self.tempo = constants::TEMPO_MAX;
                     }
+
+                    self.view.set_tempo(self.tempo);
+                    self.view.draw();
+
                     (StateTransition::NoChange, TickCommand::None)
                 }
                 ControllerMsg::Quit => (StateTransition::Exit, TickCommand::None),
