@@ -41,6 +41,10 @@ pub enum ControllerMsg {
     // Increase the tempo by the given number of beats per measure.
     AdjustTempo(f64),
 
+    // Synchronizes the metronome, so a downbeat occurs the instant
+    // this message is received.
+    Sync,
+
     // Exits the program.
     Quit,
 }
@@ -107,6 +111,7 @@ fn init_keybindings() -> Vec<Binding> {
     keys.push(Binding(b"p", &|| Some(ControllerMsg::Pause)));
     keys.push(Binding(b"P", &|| Some(ControllerMsg::Play)));
     keys.push(Binding(b" ", &|| Some(ControllerMsg::Toggle)));
+    keys.push(Binding(b".", &|| Some(ControllerMsg::Sync)));
 
     // Arrow keys
     keys.push(Binding(b"\x1B[A", &|| {

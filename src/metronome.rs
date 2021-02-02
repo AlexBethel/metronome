@@ -119,6 +119,13 @@ impl AppState for MetronomeState {
 
                     (StateTransition::NoChange, TickCommand::None)
                 }
+                ControllerMsg::Sync => {
+                    self.tick_number = 0;
+                    (
+                        StateTransition::NoChange,
+                        TickCommand::Set(Duration::new(0, 0)),
+                    )
+                }
                 ControllerMsg::Quit => (StateTransition::Exit, TickCommand::None),
             };
         } else {
