@@ -20,10 +20,10 @@
 use crate::app_state::{AppState, Keycode, StateTransition, TickCommand};
 use crate::beat_spec::{BeatSpec, Event};
 use crate::constants;
-use crate::controller::{ControllerMsg, ControllerState};
 use crate::errors::*;
+use crate::met_controller::{ControllerMsg, ControllerState};
+use crate::met_view::ViewState;
 use crate::sound::{beep, AudioConfig};
-use crate::view::ViewState;
 use std::time::Duration;
 
 // State of the metronome at any given time.

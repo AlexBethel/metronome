@@ -22,15 +22,15 @@ pub mod app_state;
 pub mod beat_spec;
 pub mod config;
 pub mod constants;
-pub mod controller;
-pub mod metronome;
+pub mod met_controller;
+pub mod met_model;
+pub mod met_view;
 pub mod sound;
 pub mod termios_handler;
-pub mod view;
 
 use app_state::state_loop;
 use config::Config;
-use metronome::MetronomeState;
+use met_model::MetronomeState;
 use std::env;
 use termios_handler::TermiosHandler;
 
