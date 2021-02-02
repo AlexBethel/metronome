@@ -69,11 +69,10 @@ fn run() -> Result<()> {
 
     let cfg = Config::new(&args_ref)?;
     if let config::ConfigResult::Run(cfg) = cfg {
-        let termios = TermiosHandler::set_stdin_raw()?;
+        let _termios = TermiosHandler::set_stdin_raw()?;
         let init_state = MetronomeState::new(&cfg.rhythm)?;
 
         let s = state_loop(Box::new(init_state));
-        drop(termios);
         return s;
     }
 
