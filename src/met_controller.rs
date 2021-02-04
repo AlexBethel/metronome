@@ -75,7 +75,6 @@ impl ControllerState {
         self.partial.push(key);
         match get_binding(&self.partial, &self.mapping) {
             BindingState::Invalid => {
-                println!("Invalid\r");
                 self.partial = vec![];
                 None
             }
