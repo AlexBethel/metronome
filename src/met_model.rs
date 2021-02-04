@@ -24,6 +24,7 @@ use crate::errors::*;
 use crate::met_controller::{ControllerMsg, ControllerState};
 use crate::met_view::ViewState;
 use crate::sound::{beep, AudioConfig};
+use crate::tap_model::TapState;
 use std::time::Duration;
 
 // State of the metronome at any given time.
@@ -57,6 +58,24 @@ impl MetronomeState {
             view: ViewState::new(rhythm.get_ticks().len() as f64 / rhythm.get_beat_len() as f64),
             controller: ControllerState::new(),
         })
+    }
+
+    // FIXME
+    pub fn new_from_tap(
+        rhythm: &BeatSpec,
+        cfg: AudioConfig,
+        volume: f64,
+        tempo: f64,
+    ) -> MetronomeState {
+        MetronomeState {
+            rhythm: rhythm.clone(),
+            tick_number: 0,
+            cfg,
+            volume,
+            tempo,
+            view: ViewState::new(rhythm.get_ticks().len() as f64 / rhythm.get_beat_len() as f64),
+            controller: ControllerState::new(),
+        }
     }
 }
 
@@ -126,6 +145,14 @@ impl AppState for MetronomeState {
                         TickCommand::Set(Duration::new(0, 0)),
                     )
                 }
+                ControllerMsg::TapMode => (
+                    StateTransition::To(Box::new(TapState::new(
+                        self.rhythm.clone(),
+                        self.cfg.clone(),
+                        self.volume,
+                    ))),
+                    TickCommand::None,
+                ),
                 ControllerMsg::Quit => (StateTransition::Exit, TickCommand::None),
             };
         } else {

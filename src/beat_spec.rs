@@ -22,7 +22,7 @@ use std::convert::TryInto;
 
 // Description of precisely what events should occur and when during a
 // single measure.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BeatSpec {
     // The set of events to run during each tick in a measure.
     ticks: Vec<Event>,

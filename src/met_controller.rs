@@ -45,6 +45,9 @@ pub enum ControllerMsg {
     // this message is received.
     Sync,
 
+    // Enters tap mode.
+    TapMode,
+
     // Exits the program.
     Quit,
 }
@@ -111,6 +114,9 @@ fn init_keybindings() -> Vec<Binding> {
     keys.push(Binding(b"P", &|| Some(ControllerMsg::Play)));
     keys.push(Binding(b" ", &|| Some(ControllerMsg::Toggle)));
     keys.push(Binding(b".", &|| Some(ControllerMsg::Sync)));
+
+    // Disabling tap mode for now until it has a user interface.
+    // keys.push(Binding(b",", &|| Some(ControllerMsg::TapMode)));
 
     // Arrow keys
     keys.push(Binding(b"\x1B[A", &|| {
