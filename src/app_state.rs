@@ -89,18 +89,25 @@ pub fn state_loop(init_state: Box<dyn AppState>) -> Result<()> {
     let mut exit = false;
     while !exit {
         let start_time = Instant::now();
-        let key = match tick_time {
-            Some(tick_time) => kbd.recv_timeout(tick_time),
-            None => Ok(kbd.recv()?),
+        let key = if !paused {
+            if let Some(tick_time) = tick_time {
+                kbd.recv_timeout(tick_time)
+            } else {
+                Ok(kbd.recv()?)
+            }
+        } else {
+            Ok(kbd.recv()?)
         };
 
         let (st, tc) = if let Ok(key) = key {
             let tmp = state.keypress(key, start_time.elapsed());
             if let Some(tick_time_unwrapped) = tick_time {
-                tick_time = match tick_time_unwrapped.checked_sub(start_time.elapsed()) {
-                    Some(time) => Some(time),
-                    None => Some(Duration::new(0, 0)),
-                };
+                if !paused {
+                    tick_time = match tick_time_unwrapped.checked_sub(start_time.elapsed()) {
+                        Some(time) => Some(time),
+                        None => Some(Duration::new(0, 0)),
+                    };
+                }
             }
             tmp
         } else {
