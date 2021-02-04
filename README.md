@@ -76,10 +76,10 @@ key bindings are:
 * "p": Pause
 * "P": Play
 * " " (space): Toggle between playing and paused
-* Up: Increase volume
-* Down: Decrease volume
-* Right: Increase tempo
-* Left: Decrease tempo
+* Up, "k", "C-p": Increase volume
+* Down, "j", "C-n": Decrease volume
+* Right, "l", "C-b": Increase tempo
+* Left, "h", "C-f": Decrease tempo
 * "q": Quit
 * "g": Prompts for a tempo, and sets the metronome's tempo
   accordingly. (Not yet implemented.)

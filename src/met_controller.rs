@@ -136,6 +136,38 @@ fn init_keybindings() -> Vec<Binding> {
         Some(ControllerMsg::AdjustTempo(-constants::TEMPO_ADJUST))
     }));
 
+    // Vim-like directional keys
+    keys.push(Binding(b"k", &|| {
+        Some(ControllerMsg::AdjustVolume(constants::VOL_ADJUST))
+    }));
+    keys.push(Binding(b"j", &|| {
+        Some(ControllerMsg::AdjustVolume(-constants::VOL_ADJUST))
+    }));
+    keys.push(Binding(b"l", &|| {
+        Some(ControllerMsg::AdjustTempo(constants::TEMPO_ADJUST))
+    }));
+    keys.push(Binding(b"h", &|| {
+        Some(ControllerMsg::AdjustTempo(-constants::TEMPO_ADJUST))
+    }));
+
+    // Emacs-like directional keys
+    keys.push(Binding(b"\x10", &|| {
+        // C-p
+        Some(ControllerMsg::AdjustVolume(constants::VOL_ADJUST))
+    }));
+    keys.push(Binding(b"\x0E", &|| {
+        // C-n
+        Some(ControllerMsg::AdjustVolume(-constants::VOL_ADJUST))
+    }));
+    keys.push(Binding(b"\x06", &|| {
+        // C-f
+        Some(ControllerMsg::AdjustTempo(constants::TEMPO_ADJUST))
+    }));
+    keys.push(Binding(b"\x02", &|| {
+        // C-b
+        Some(ControllerMsg::AdjustTempo(-constants::TEMPO_ADJUST))
+    }));
+
     keys.push(Binding(b"q", &|| Some(ControllerMsg::Quit)));
     keys.push(Binding(b"\x03", &|| {
         // Control-C
