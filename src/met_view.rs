@@ -28,7 +28,7 @@ enum Direction {
 
 // State of the view module; this represents exactly which numbers and
 // indicators are visible on the screen.
-pub struct ViewState {
+pub struct MetronomeView {
     // Current progress through a measure, on a scale from 0 to 1.
     progress: f64,
 
@@ -42,7 +42,7 @@ pub struct ViewState {
     beats_per_measure: f64,
 }
 
-impl ViewState {
+impl MetronomeView {
     pub fn new(beats_per_measure: f64) -> Self {
         Self {
             progress: 0.0,
@@ -117,10 +117,10 @@ impl ViewState {
         )
     }
 
-    // Draws the ViewState on the screen.
+    // Draws the MetronomeView on the screen.
     pub fn draw(&self) {
         // Reset to the left edge of the screen, so as to draw over
-        // whatever ViewState was there before.
+        // whatever MetronomeView was there before.
         print!("\r");
 
         print!("{}", self);
@@ -129,7 +129,7 @@ impl ViewState {
     }
 }
 
-impl Display for ViewState {
+impl Display for MetronomeView {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,

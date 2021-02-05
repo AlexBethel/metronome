@@ -21,7 +21,7 @@ use crate::app_state::{AppState, Keycode, StateTransition, TickCommand};
 use crate::beat_spec::{BeatSpec, Event};
 use crate::constants;
 use crate::met_controller::{ControllerMsg, ControllerState};
-use crate::met_view::ViewState;
+use crate::met_view::MetronomeView;
 use crate::sound::{beep, AudioConfig};
 use crate::tap_model::TapState;
 use std::time::Duration;
@@ -42,7 +42,7 @@ pub struct MetronomeState {
     tempo: f64,
 
     // State of the view and controller subsystems.
-    view: ViewState,
+    view: MetronomeView,
     controller: ControllerState,
 }
 
@@ -54,7 +54,9 @@ impl MetronomeState {
             cfg,
             volume,
             tempo,
-            view: ViewState::new(rhythm.get_ticks().len() as f64 / rhythm.get_beat_len() as f64),
+            view: MetronomeView::new(
+                rhythm.get_ticks().len() as f64 / rhythm.get_beat_len() as f64,
+            ),
             controller: ControllerState::new(),
         }
     }
