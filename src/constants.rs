@@ -22,7 +22,7 @@
 pub const NAME: &str = "metronome";
 
 // Program version. Try and keep this in sync with Git tags.
-pub const VER: &str = "0.1.0";
+pub const VER: &str = "0.1.3";
 
 // Program copyright year(s) and author(s).
 pub const COPY_YEARS: &str = "2021";
