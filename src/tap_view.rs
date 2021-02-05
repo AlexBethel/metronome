@@ -17,6 +17,8 @@
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::constants;
+use colorful::Color;
+use colorful::Colorful;
 use std::fmt::Display;
 use std::io::{stdout, Write};
 
@@ -74,10 +76,16 @@ impl Display for TapView {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
-            "[{}] [{}] ({})",
-            self.tempo_indicator(),
-            self.progress_indicator(),
-            self.volume_indicator(),
+            "{}{}{} {}{}{} {}{}{}",
+            "[".color(Color::Yellow),
+            self.tempo_indicator().color(Color::LightBlue),
+            "]".color(Color::Yellow),
+            "[".color(Color::Yellow),
+            self.progress_indicator().color(Color::Green),
+            "]".color(Color::Yellow),
+            "(".color(Color::Yellow),
+            self.volume_indicator().color(Color::LightRed),
+            ")".color(Color::Yellow),
         )
     }
 }

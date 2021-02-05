@@ -18,6 +18,7 @@
 
 extern crate getopts;
 extern crate termios;
+extern crate colorful;
 pub mod app_state;
 pub mod beat_spec;
 pub mod config;
