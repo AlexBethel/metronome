@@ -47,6 +47,12 @@ Runs the metronome with the given custom rhythm. This invocation forms
 a superset of the other two invocations, but is less easy to use. See
 the section on "Rhythm specification" for more information.
 
+### Other options
+
+* `-h`, `--help`: Prints a help string.
+* `-v`, `--version`: Prints the program version.
+* `-l`, `--volume <volume>`: Sets the initial volume, out of 100.
+
 ## Rhythm specification
 
 Rhythms are specified as strings of commands, where each command

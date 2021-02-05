@@ -30,6 +30,9 @@ pub struct Config {
 
     // The initial tempo to beat at.
     pub tempo: f64,
+
+    // The initial volume.
+    pub volume: f64,
 }
 
 // Possible outcomes from parsing a configuration.
@@ -111,6 +114,7 @@ fn parse_free_args(matches: &getopts::Matches, opts: &Options) -> Result<Config>
                 constants::DEF_SUBDIV_PER_BEAT,
             ),
             tempo: constants::DEF_TEMPO,
+            volume: constants::DEF_VOLUME,
         }),
         1 => parse_free_arg(&matches.free[0]),
         _ => {
@@ -144,10 +148,12 @@ fn parse_free_arg(arg: &str) -> Result<Config> {
         Some(x) => x.parse()?,
         None => constants::DEF_SUBDIV_PER_BEAT,
     };
+    let volume = constants::DEF_VOLUME;
 
     Ok(Config {
         rhythm: BeatSpec::from_subdiv(beats_per_measure, subdivisions_per_beat),
         tempo,
+        volume,
     })
 }
 
@@ -198,6 +204,14 @@ const SWITCHES: &[CmdSwitch] = &[
 
         action: &opt_rhythm,
     },
+    CmdSwitch::Option {
+        short_name: "l",
+        long_name: "volume",
+        description: "Sets the initial volume, out of 100.",
+        example: "<volume>",
+
+        action: &opt_volume,
+    },
     CmdSwitch::Flag {
         short_name: "h",
         long_name: "help",
@@ -221,6 +235,11 @@ fn opt_crossbeat(arg: &str, config: &mut Config, _opts: &Options) -> Result<Opti
 
 fn opt_rhythm(arg: &str, config: &mut Config, _opts: &Options) -> Result<Option<ConfigResult>> {
     config.rhythm = parse_rhythm_string(arg)?;
+    Ok(None)
+}
+
+fn opt_volume(arg: &str, config: &mut Config, _opts: &Options) -> Result<Option<ConfigResult>> {
+    config.volume = arg.parse::<f64>()? / 100.0;
     Ok(None)
 }
 
