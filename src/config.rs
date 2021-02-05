@@ -27,6 +27,9 @@ use getopts::Options;
 pub struct Config {
     // Specification of the rhythm to beat.
     pub rhythm: BeatSpec,
+
+    // The initial tempo to beat at.
+    pub tempo: f64,
 }
 
 // Possible outcomes from parsing a configuration.
@@ -50,7 +53,7 @@ enum CmdSwitch {
         description: &'static str,
         example: &'static str,
 
-        action: &'static dyn Fn(&str, &mut BeatSpec, &Options) -> Result<Option<ConfigResult>>,
+        action: &'static dyn Fn(&str, &mut Config, &Options) -> Result<Option<ConfigResult>>,
     },
 
     // A switch that does not have an argument.
@@ -59,7 +62,7 @@ enum CmdSwitch {
         long_name: &'static str,
         description: &'static str,
 
-        action: &'static dyn Fn(&mut BeatSpec, &Options) -> Result<Option<ConfigResult>>,
+        action: &'static dyn Fn(&mut Config, &Options) -> Result<Option<ConfigResult>>,
     },
 }
 
@@ -71,7 +74,7 @@ impl Config {
         let opts = compile_opts(SWITCHES);
 
         let matches = opts.parse(args)?;
-        let mut beat_spec = parse_free_args(&matches, &opts)?;
+        let mut cfg = parse_free_args(&matches, &opts)?;
 
         for switch in SWITCHES {
             let short_name = match switch {
@@ -82,9 +85,9 @@ impl Config {
             if matches.opt_present(short_name) {
                 let res = match switch {
                     CmdSwitch::Option { action, .. } => {
-                        action(&matches.opt_str(short_name).unwrap(), &mut beat_spec, &opts)
+                        action(&matches.opt_str(short_name).unwrap(), &mut cfg, &opts)
                     }
-                    CmdSwitch::Flag { action, .. } => action(&mut beat_spec, &opts),
+                    CmdSwitch::Flag { action, .. } => action(&mut cfg, &opts),
                 }?;
 
                 if let Some(v) = res {
@@ -93,20 +96,22 @@ impl Config {
             }
         }
 
-        return Ok(ConfigResult::Run(Config { rhythm: beat_spec }));
+        return Ok(ConfigResult::Run(cfg));
     }
 }
 
 // Parses all the free arguments to the program. Returns a default
 // BeatSpec object, which might be further modified or varied upon by
 // the option arguments.
-fn parse_free_args(matches: &getopts::Matches, opts: &Options) -> Result<BeatSpec> {
+fn parse_free_args(matches: &getopts::Matches, opts: &Options) -> Result<Config> {
     return match matches.free.len() {
-        0 => Ok(BeatSpec::from_subdiv(
-            constants::DEF_TEMPO,
-            constants::DEF_BEATS_PER_MEASURE,
-            constants::DEF_SUBDIV_PER_BEAT,
-        )),
+        0 => Ok(Config {
+            rhythm: BeatSpec::from_subdiv(
+                constants::DEF_BEATS_PER_MEASURE,
+                constants::DEF_SUBDIV_PER_BEAT,
+            ),
+            tempo: constants::DEF_TEMPO,
+        }),
         1 => parse_free_arg(&matches.free[0]),
         _ => {
             print_help(opts);
@@ -118,7 +123,7 @@ fn parse_free_args(matches: &getopts::Matches, opts: &Options) -> Result<BeatSpe
 // Parses the free argument to the program (which takes the form
 // "<tempo>[:<beats_per_measure>[:<subdivisions_per_beat>]]").
 // Returns its corresponding BeatSpec.
-fn parse_free_arg(arg: &str) -> Result<BeatSpec> {
+fn parse_free_arg(arg: &str) -> Result<Config> {
     let mut nums = arg.split(':');
     let tempo = nums.next();
     let beats_per_measure = nums.next();
@@ -140,11 +145,10 @@ fn parse_free_arg(arg: &str) -> Result<BeatSpec> {
         None => constants::DEF_SUBDIV_PER_BEAT,
     };
 
-    Ok(BeatSpec::from_subdiv(
+    Ok(Config {
+        rhythm: BeatSpec::from_subdiv(beats_per_measure, subdivisions_per_beat),
         tempo,
-        beats_per_measure,
-        subdivisions_per_beat,
-    ))
+    })
 }
 
 // Compiles a set of options in our format to the getopt::Options
@@ -210,50 +214,42 @@ const SWITCHES: &[CmdSwitch] = &[
     },
 ];
 
-fn opt_crossbeat(
-    arg: &str,
-    beat_spec: &mut BeatSpec,
-    _opts: &Options,
-) -> Result<Option<ConfigResult>> {
-    *beat_spec = parse_cross_rhythms(beat_spec, arg)?;
+fn opt_crossbeat(arg: &str, config: &mut Config, _opts: &Options) -> Result<Option<ConfigResult>> {
+    config.rhythm = parse_cross_rhythms(arg)?;
     Ok(None)
 }
 
-fn opt_rhythm(
-    arg: &str,
-    beat_spec: &mut BeatSpec,
-    _opts: &Options,
-) -> Result<Option<ConfigResult>> {
-    *beat_spec = parse_rhythm_string(beat_spec, arg)?;
+fn opt_rhythm(arg: &str, config: &mut Config, _opts: &Options) -> Result<Option<ConfigResult>> {
+    config.rhythm = parse_rhythm_string(arg)?;
     Ok(None)
 }
 
-fn flag_help(_beat_spec: &mut BeatSpec, opts: &Options) -> Result<Option<ConfigResult>> {
+fn flag_help(_config: &mut Config, opts: &Options) -> Result<Option<ConfigResult>> {
     print_help(opts);
     Ok(Some(ConfigResult::DontRun))
 }
 
-fn flag_version(_beat_spec: &mut BeatSpec, _opts: &Options) -> Result<Option<ConfigResult>> {
+fn flag_version(_config: &mut Config, _opts: &Options) -> Result<Option<ConfigResult>> {
     print_version();
     Ok(Some(ConfigResult::DontRun))
 }
 
 // Parses and applies a cross-rhythm string. Returns a modified
 // version of the supplied BeatSpec object.
-fn parse_cross_rhythms(beat_spec: &BeatSpec, cross_str: &str) -> Result<BeatSpec> {
+fn parse_cross_rhythms(cross_str: &str) -> Result<BeatSpec> {
     let mut beats = vec![];
     let beats_str = cross_str.split(':');
     for beat in beats_str {
         beats.push(beat.parse()?);
     }
 
-    Ok(BeatSpec::from_crossbeats(beat_spec.get_tempo(), &beats))
+    Ok(BeatSpec::from_crossbeats(&beats))
 }
 
 // Parses and applies a rhythm specification string. Returns a
 // modified version of the supplied BeatSpec object.
-fn parse_rhythm_string(beat_spec: &BeatSpec, rhythm_str: &str) -> Result<BeatSpec> {
-    BeatSpec::from_rhythmspec(beat_spec.get_tempo(), rhythm_str)
+fn parse_rhythm_string(rhythm_str: &str) -> Result<BeatSpec> {
+    BeatSpec::from_rhythmspec(rhythm_str)
 }
 
 // Prints the program's usage string.

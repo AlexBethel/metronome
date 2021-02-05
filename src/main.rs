@@ -77,9 +77,9 @@ fn run() -> Result<()> {
         let rhythm = cfg
             .rhythm
             .make_divisible(constants::MEAS_INDIC_WIDTH as u32);
-        let cfg = AudioConfig::new()?;
+        let acfg = AudioConfig::new()?;
         let init_state =
-            MetronomeState::new(&rhythm, cfg, constants::DEF_VOLUME, rhythm.get_tempo());
+            MetronomeState::new(&rhythm, acfg, constants::DEF_VOLUME, cfg.tempo);
 
         let s = state_loop(Box::new(init_state));
         return s;

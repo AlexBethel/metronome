@@ -29,9 +29,6 @@ pub struct BeatSpec {
 
     // Length of a beat, in ticks.
     beat_len: u32,
-
-    // Tempo, in beats per minute.
-    tempo: f64,
 }
 
 // Different types of events that can occur in a measure.
@@ -49,13 +46,13 @@ pub enum Event {
 impl BeatSpec {
     // Creates a BeatSpec given a number of beats per measure and
     // subdivisions per beat.
-    pub fn from_subdiv(tempo: f64, beats: u32, subdiv: u32) -> BeatSpec {
-        Self::from_crossbeats(tempo, &vec![beats, beats * subdiv])
+    pub fn from_subdiv(beats: u32, subdiv: u32) -> BeatSpec {
+        Self::from_crossbeats(&vec![beats, beats * subdiv])
     }
 
     // Creates a BeatSpec given a set of simultaneous cross-rhythms,
     // specified in order of decreasing emphasis.
-    pub fn from_crossbeats(tempo: f64, beats: &[u32]) -> BeatSpec {
+    pub fn from_crossbeats(beats: &[u32]) -> BeatSpec {
         // Add an implicit crossbeat of 1, so we get a high-pitched
         // beep at the start of each measure.
         let beats = &{
@@ -85,12 +82,11 @@ impl BeatSpec {
         BeatSpec {
             ticks,
             beat_len: n_ticks / beats[1],
-            tempo,
         }
     }
 
     // Creates a BeatSpec from a rhythm specification string.
-    pub fn from_rhythmspec(tempo: f64, spec: &str) -> Result<BeatSpec> {
+    pub fn from_rhythmspec(spec: &str) -> Result<BeatSpec> {
         let mut ticks = vec![];
         ticks.reserve(spec.len());
         let mut beat_len = 1;
@@ -117,7 +113,6 @@ impl BeatSpec {
         Ok(BeatSpec {
             ticks,
             beat_len,
-            tempo,
         })
     }
 
@@ -143,7 +138,6 @@ impl BeatSpec {
                 v
             },
             beat_len: self.beat_len * factor,
-            tempo: self.tempo,
         }
     }
 
@@ -154,10 +148,6 @@ impl BeatSpec {
 
     pub fn get_beat_len(&self) -> u32 {
         self.beat_len
-    }
-
-    pub fn get_tempo(&self) -> f64 {
-        self.tempo
     }
 }
 
@@ -190,20 +180,18 @@ mod tests {
 
     #[test]
     fn subdiv_test() {
-        let bs = BeatSpec::from_subdiv(60.0, 3, 2);
+        let bs = BeatSpec::from_subdiv(3, 2);
 
         assert_eq!(bs.ticks.len(), 6);
         assert_eq!(bs.beat_len, 2);
-        assert_eq!(bs.tempo, 60.0);
     }
 
     #[test]
     fn crossbeat_test() {
-        let bs = BeatSpec::from_crossbeats(60.0, &vec![3, 6]);
+        let bs = BeatSpec::from_crossbeats(&vec![3, 6]);
 
         assert_eq!(bs.ticks.len(), 6);
         assert_eq!(bs.beat_len, 2);
-        assert_eq!(bs.tempo, 60.0);
 
         assert_eq!(bs.ticks[0], Event::Beep(0));
         assert_eq!(bs.ticks[1], Event::Beep(2));
@@ -215,11 +203,10 @@ mod tests {
 
     #[test]
     fn rspec_test() {
-        let bs = BeatSpec::from_rhythmspec(60.0, "02!1212").unwrap();
+        let bs = BeatSpec::from_rhythmspec("02!1212").unwrap();
 
         assert_eq!(bs.ticks.len(), 6);
         assert_eq!(bs.beat_len, 2);
-        assert_eq!(bs.tempo, 60.0);
     }
 
     #[test]
