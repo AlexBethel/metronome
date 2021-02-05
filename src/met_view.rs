@@ -17,7 +17,6 @@
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::constants;
-use colorful::Color;
 use colorful::Colorful;
 use std::fmt::Display;
 use std::io::{stdout, Write};
@@ -136,15 +135,15 @@ impl Display for MetronomeView {
         write!(
             f,
             "{}{}{} {}{}{} {}{}{}",
-            "[".color(Color::Yellow),
-            self.tempo_indicator().color(Color::LightBlue),
-            "]".color(Color::Yellow),
-            "[".color(Color::Yellow),
-            self.progress_indicator().color(Color::Green),
-            "]".color(Color::Yellow),
-            "(".color(Color::Yellow),
-            self.volume_indicator().color(Color::LightRed),
-            ")".color(Color::Yellow),
+            "[".color(constants::BRACKET_COLOR),
+            self.tempo_indicator().color(constants::TEMPO_COLOR),
+            "]".color(constants::BRACKET_COLOR),
+            "[".color(constants::BRACKET_COLOR),
+            self.progress_indicator().color(constants::PROGRESS_COLOR),
+            "]".color(constants::BRACKET_COLOR),
+            "(".color(constants::BRACKET_COLOR),
+            self.volume_indicator().color(constants::VOLUME_COLOR),
+            ")".color(constants::BRACKET_COLOR),
         )
     }
 }

@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
+use colorful::Color;
+
 // ---- Meta ----
 
 // Name of the project.
@@ -79,3 +81,9 @@ pub const NUM_INDIC_WIDTH: usize = 3;
 
 // Width of the measure progress indicator.
 pub const MEAS_INDIC_WIDTH: usize = 40;
+
+// Color scheme.
+pub const BRACKET_COLOR: Color = Color::Yellow;
+pub const TEMPO_COLOR: Color = Color::LightBlue;
+pub const PROGRESS_COLOR: Color = Color::Green;
+pub const VOLUME_COLOR: Color = Color::LightRed;
