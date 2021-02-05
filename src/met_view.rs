@@ -21,6 +21,45 @@ use colorful::Colorful;
 use std::fmt::Display;
 use std::io::{stdout, Write};
 
+// Formats a view in a similar manner to the Metronome mode view. If
+// indicators are omitted, they are left blank in the output; if they
+// are provided, they should *not* be pre-colorized, as this function
+// colorizes them automatically.
+pub fn fmt_metronome_like(
+    f: &mut std::fmt::Formatter<'_>,
+    tempo_indicator: Option<&str>,
+    progress_indicator: Option<&str>,
+    volume_indicator: Option<&str>,
+) -> Result<(), std::fmt::Error> {
+    // Set up defaults for the indicators.
+    let tempo_indicator = match tempo_indicator {
+        Some(x) => x.into(),
+        None => " ".repeat(constants::NUM_INDIC_WIDTH),
+    };
+    let progress_indicator = match progress_indicator {
+        Some(x) => x.into(),
+        None => " ".repeat(constants::MEAS_INDIC_WIDTH),
+    };
+    let volume_indicator = match volume_indicator {
+        Some(x) => x.into(),
+        None => " ".repeat(constants::NUM_INDIC_WIDTH),
+    };
+
+    write!(
+        f,
+        "{}{}{} {}{}{} {}{}{}",
+        "[".color(constants::BRACKET_COLOR),
+        tempo_indicator.color(constants::TEMPO_COLOR),
+        "]".color(constants::BRACKET_COLOR),
+        "[".color(constants::BRACKET_COLOR),
+        progress_indicator.color(constants::PROGRESS_COLOR),
+        "]".color(constants::BRACKET_COLOR),
+        "(".color(constants::BRACKET_COLOR),
+        volume_indicator.color(constants::VOLUME_COLOR),
+        ")".color(constants::BRACKET_COLOR),
+    )
+}
+
 // Direction of movement for the metronome indicator.
 enum Direction {
     Left,
@@ -132,18 +171,11 @@ impl MetronomeView {
 
 impl Display for MetronomeView {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
+        fmt_metronome_like(
             f,
-            "{}{}{} {}{}{} {}{}{}",
-            "[".color(constants::BRACKET_COLOR),
-            self.tempo_indicator().color(constants::TEMPO_COLOR),
-            "]".color(constants::BRACKET_COLOR),
-            "[".color(constants::BRACKET_COLOR),
-            self.progress_indicator().color(constants::PROGRESS_COLOR),
-            "]".color(constants::BRACKET_COLOR),
-            "(".color(constants::BRACKET_COLOR),
-            self.volume_indicator().color(constants::VOLUME_COLOR),
-            ")".color(constants::BRACKET_COLOR),
+            Some(&self.tempo_indicator()),
+            Some(&self.progress_indicator()),
+            Some(&self.volume_indicator()),
         )
     }
 }

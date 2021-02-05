@@ -17,7 +17,7 @@
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::constants;
-use colorful::Colorful;
+use crate::met_view::fmt_metronome_like;
 use std::fmt::Display;
 use std::io::{stdout, Write};
 
@@ -26,9 +26,6 @@ pub struct TapView {
     volume: f64,
 }
 
-// TODO: There's a lot of repeated and very similar code here from
-// met_view.rs. Make a shared trait or set of functions for drawing
-// "things that look look kind of like the metronome view".
 impl TapView {
     pub fn new(volume: f64) -> Self {
         Self { volume }
@@ -37,17 +34,6 @@ impl TapView {
     // Sets the volume level, on a scale from 0 to 1.
     pub fn set_volume(&mut self, volume: f64) {
         self.volume = volume;
-    }
-
-    // Visual indicator string for the tempo marking.
-    fn tempo_indicator(&self) -> String {
-        "TAP".to_string()
-    }
-
-    // Visual indicator for the for the progress through the measure.
-    // In Tap mode, it's currently just kept blank.
-    fn progress_indicator(&self) -> String {
-        " ".repeat(constants::MEAS_INDIC_WIDTH)
     }
 
     // Visual indicator for the volume level.
@@ -73,18 +59,6 @@ impl TapView {
 
 impl Display for TapView {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "{}{}{} {}{}{} {}{}{}",
-            "[".color(constants::BRACKET_COLOR),
-            self.tempo_indicator().color(constants::TEMPO_COLOR),
-            "]".color(constants::BRACKET_COLOR),
-            "[".color(constants::BRACKET_COLOR),
-            self.progress_indicator().color(constants::PROGRESS_COLOR),
-            "]".color(constants::BRACKET_COLOR),
-            "(".color(constants::BRACKET_COLOR),
-            self.volume_indicator().color(constants::VOLUME_COLOR),
-            ")".color(constants::BRACKET_COLOR),
-        )
+        fmt_metronome_like(f, Some("TAP"), None, Some(&self.volume_indicator()))
     }
 }
