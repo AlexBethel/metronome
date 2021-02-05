@@ -20,7 +20,6 @@
 use crate::app_state::{AppState, Keycode, StateTransition, TickCommand};
 use crate::beat_spec::{BeatSpec, Event};
 use crate::constants;
-use crate::errors::*;
 use crate::met_controller::{ControllerMsg, ControllerState};
 use crate::met_view::ViewState;
 use crate::sound::{beep, AudioConfig};
@@ -48,25 +47,7 @@ pub struct MetronomeState {
 }
 
 impl MetronomeState {
-    pub fn new(rhythm: &BeatSpec) -> Result<MetronomeState> {
-        Ok(MetronomeState {
-            rhythm: rhythm.make_divisible(constants::MEAS_INDIC_WIDTH as u32),
-            tick_number: 0,
-            cfg: AudioConfig::new()?,
-            volume: constants::DEF_VOLUME,
-            tempo: rhythm.get_tempo(),
-            view: ViewState::new(rhythm.get_ticks().len() as f64 / rhythm.get_beat_len() as f64),
-            controller: ControllerState::new(),
-        })
-    }
-
-    // FIXME
-    pub fn new_from_tap(
-        rhythm: &BeatSpec,
-        cfg: AudioConfig,
-        volume: f64,
-        tempo: f64,
-    ) -> MetronomeState {
+    pub fn new(rhythm: &BeatSpec, cfg: AudioConfig, volume: f64, tempo: f64) -> MetronomeState {
         MetronomeState {
             rhythm: rhythm.clone(),
             tick_number: 0,

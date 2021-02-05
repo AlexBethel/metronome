@@ -82,7 +82,7 @@ impl TapState {
     // Leaves Tap mode and returns to Metronome mode.
     fn exit(&self) -> (StateTransition, TickCommand) {
         (
-            StateTransition::To(Box::new(MetronomeState::new_from_tap(
+            StateTransition::To(Box::new(MetronomeState::new(
                 &self.rhythm,
                 self.cfg.clone(),
                 self.volume,

@@ -32,6 +32,7 @@ pub mod termios_handler;
 use app_state::state_loop;
 use config::Config;
 use met_model::MetronomeState;
+use sound::AudioConfig;
 use std::env;
 use termios_handler::TermiosHandler;
 
@@ -71,7 +72,13 @@ fn run() -> Result<()> {
     let cfg = Config::new(&args_ref)?;
     if let config::ConfigResult::Run(cfg) = cfg {
         let _termios = TermiosHandler::set_stdin_raw()?;
-        let init_state = MetronomeState::new(&cfg.rhythm)?;
+
+        let rhythm = cfg
+            .rhythm
+            .make_divisible(constants::MEAS_INDIC_WIDTH as u32);
+        let cfg = AudioConfig::new()?;
+        let init_state =
+            MetronomeState::new(&rhythm, cfg, constants::DEF_VOLUME, constants::DEF_TEMPO);
 
         let s = state_loop(Box::new(init_state));
         return s;
