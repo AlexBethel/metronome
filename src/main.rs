@@ -27,6 +27,7 @@ pub mod met_model;
 pub mod met_view;
 pub mod sound;
 pub mod tap_model;
+pub mod tap_view;
 pub mod termios_handler;
 
 use app_state::state_loop;

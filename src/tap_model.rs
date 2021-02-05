@@ -22,6 +22,7 @@ use crate::beat_spec::BeatSpec;
 use crate::constants;
 use crate::met_model::MetronomeState;
 use crate::sound::AudioConfig;
+use crate::tap_view::TapView;
 use std::time::{Duration, Instant};
 
 // State of the tap mode.
@@ -37,6 +38,9 @@ pub struct TapState {
 
     // The volume at which to produce tick sounds.
     volume: f64,
+
+    // The on-screen representation of the TapState.
+    view: TapView,
 }
 
 impl TapState {
@@ -48,6 +52,7 @@ impl TapState {
             rhythm,
             cfg,
             volume,
+            view: TapView::new(volume),
         }
     }
 
@@ -98,7 +103,7 @@ impl TapState {
 
 impl AppState for TapState {
     fn tick(&mut self) -> (StateTransition, TickCommand) {
-        // This state ignores ticks.
+        self.view.draw();
         (StateTransition::NoChange, TickCommand::None)
     }
 
