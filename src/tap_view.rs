@@ -36,6 +36,15 @@ impl TapView {
         self.volume = volume;
     }
 
+    // Visual indicator for the tempo. For the Tap mode, this is just
+    // the word "TAP" padded with spaces to NUM_INDIC_WIDTH.
+    fn tempo_indicator(&self) -> String {
+        let s = "TAP";
+        let n_spaces = constants::NUM_INDIC_WIDTH - s.len();
+
+        " ".repeat(n_spaces) + s
+    }
+
     // Visual indicator for the volume level.
     fn volume_indicator(&self) -> String {
         format!(
@@ -59,6 +68,11 @@ impl TapView {
 
 impl Display for TapView {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        fmt_metronome_like(f, Some("TAP"), None, Some(&self.volume_indicator()))
+        fmt_metronome_like(
+            f,
+            Some(&self.tempo_indicator()),
+            None,
+            Some(&self.volume_indicator()),
+        )
     }
 }
