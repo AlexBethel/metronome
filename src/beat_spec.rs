@@ -110,10 +110,7 @@ impl BeatSpec {
             n += 1;
         }
 
-        Ok(BeatSpec {
-            ticks,
-            beat_len,
-        })
+        Ok(BeatSpec { ticks, beat_len })
     }
 
     // Constructs a BeatSpec with the same content as this one, but
