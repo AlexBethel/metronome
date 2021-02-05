@@ -44,7 +44,8 @@ pub struct TapState {
 }
 
 impl TapState {
-    // Constructs a new TapState given the previous MetronomeState.
+    // Constructs a new TapState given information from the previous
+    // MetronomeState.
     pub fn new(rhythm: BeatSpec, cfg: AudioConfig, volume: f64) -> Self {
         Self {
             // The first tap occurs the moment this state is invoked.
