@@ -301,7 +301,7 @@ mod tests {
             ConfigResult::Run(x) => x,
             ConfigResult::DontRun => panic!("Got DontRun"),
         };
-        assert_eq!(default_test.rhythm.get_tempo(), constants::DEF_TEMPO);
+        assert_eq!(default_test.tempo, constants::DEF_TEMPO);
         assert_eq!(
             default_test.rhythm.get_beat_len(),
             constants::DEF_SUBDIV_PER_BEAT
@@ -326,7 +326,7 @@ mod tests {
             ConfigResult::Run(x) => x,
             ConfigResult::DontRun => panic!("Got DontRun"),
         };
-        assert_eq!(ctest.rhythm.get_tempo(), constants::DEF_TEMPO);
+        assert_eq!(ctest.tempo, constants::DEF_TEMPO);
         assert_eq!(ctest.rhythm.get_beat_len(), 3);
         assert_eq!(ctest.rhythm.get_ticks().len(), (2 * 3) as usize);
 
@@ -334,7 +334,7 @@ mod tests {
             ConfigResult::Run(x) => x,
             ConfigResult::DontRun => panic!("Got DontRun"),
         };
-        assert_eq!(stest.rhythm.get_tempo(), constants::DEF_TEMPO);
+        assert_eq!(stest.tempo, constants::DEF_TEMPO);
         assert_eq!(stest.rhythm.get_beat_len(), 2);
         assert_eq!(stest.rhythm.get_ticks().len(), 3);
     }
@@ -343,17 +343,17 @@ mod tests {
     fn free_arg_test() {
         // Should default to being in 4, with no beat subdivision.
         let test_1 = parse_free_arg("72").unwrap();
-        assert_eq!(test_1.get_tempo(), 72.0);
-        assert_eq!(test_1.get_beat_len(), constants::DEF_SUBDIV_PER_BEAT);
+        assert_eq!(test_1.tempo, 72.0);
+        assert_eq!(test_1.rhythm.get_beat_len(), constants::DEF_SUBDIV_PER_BEAT);
         assert_eq!(
-            test_1.get_ticks().len(),
+            test_1.rhythm.get_ticks().len(),
             (constants::DEF_BEATS_PER_MEASURE * constants::DEF_SUBDIV_PER_BEAT) as usize
         );
 
         let test_2 = parse_free_arg("72:5:3").unwrap();
-        assert_eq!(test_2.get_tempo(), 72.0);
-        assert_eq!(test_2.get_beat_len(), 3);
-        assert_eq!(test_2.get_ticks().len(), 5 * 3);
+        assert_eq!(test_2.tempo, 72.0);
+        assert_eq!(test_2.rhythm.get_beat_len(), 3);
+        assert_eq!(test_2.rhythm.get_ticks().len(), 5 * 3);
 
         // Extra parameters and invalid numbers should both throw
         // syntax errors.
@@ -370,16 +370,12 @@ mod tests {
 
     #[test]
     fn cross_rhythm_parse_test() {
-        // Need a template to get the tempo from.
-        let tmp = BeatSpec::from_rhythmspec(72.0, "0").unwrap();
-
         // Use 3 primes to make the math simpler.
-        let valid_test = parse_cross_rhythms(&tmp, "3:5:17").unwrap();
-        assert_eq!(valid_test.get_tempo(), 72.0);
+        let valid_test = parse_cross_rhythms("3:5:17").unwrap();
         assert_eq!(valid_test.get_beat_len(), 5 * 17);
         assert_eq!(valid_test.get_ticks().len(), 3 * 5 * 17);
 
-        let invalid_test = parse_cross_rhythms(&valid_test, "3:x:17");
+        let invalid_test = parse_cross_rhythms("3:x:17");
         if let Ok(_) = invalid_test {
             panic!("Valid result from invalid input");
         }
