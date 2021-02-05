@@ -104,7 +104,7 @@ impl TapState {
 impl AppState for TapState {
     fn tick(&mut self) -> (StateTransition, TickCommand) {
         self.view.draw();
-        (StateTransition::NoChange, TickCommand::None)
+        (StateTransition::NoChange, TickCommand::Unset)
     }
 
     fn keypress(&mut self, key: Keycode, _time: Duration) -> (StateTransition, TickCommand) {
@@ -113,11 +113,11 @@ impl AppState for TapState {
         match key {
             Keycode::Key(b',') => {
                 self.times.push(Instant::now());
-                (StateTransition::NoChange, TickCommand::None)
+                (StateTransition::NoChange, TickCommand::Unset)
             }
             Keycode::Key(b'\x03') => {
                 // Exit on Control-C
-                (StateTransition::Exit, TickCommand::None)
+                (StateTransition::Exit, TickCommand::Unset)
             }
             _ => self.exit(),
         }

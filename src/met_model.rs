@@ -134,7 +134,7 @@ impl AppState for MetronomeState {
                         self.cfg.clone(),
                         self.volume,
                     ))),
-                    TickCommand::None,
+                    TickCommand::Set(Duration::new(0, 0)),
                 ),
                 ControllerMsg::Quit => (StateTransition::Exit, TickCommand::None),
             };

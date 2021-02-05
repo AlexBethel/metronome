@@ -55,13 +55,17 @@ pub enum TickCommand {
     // amount of time.
     Set(Duration),
 
+    // Sets the tick manager to never run; roughly equivalent to
+    // Set(infinity).
+    Unset,
+
     // Pauses the tick manager if it was running; does nothing
     // otherwise.
     Pause,
 
     // Resumes the tick manager if it was not running; does nothing
-    // otherwise. Panics if no duration was previously indicated with
-    // Set().
+    // otherwise. Panics if no duration was previously initialized
+    // with Set().
     Resume,
 
     // Resumes the tick manager if it was paused and pauses it if it
@@ -142,6 +146,10 @@ fn proc_transition(
         TickCommand::None => {}
         TickCommand::Set(d) => {
             *tick_time = Some(d);
+            *paused = false;
+        }
+        TickCommand::Unset => {
+            *tick_time = None;
             *paused = false;
         }
         TickCommand::Pause => {
