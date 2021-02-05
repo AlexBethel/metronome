@@ -92,4 +92,5 @@ key bindings are:
 * ".": Immediately synchronizes the metronome such that a measure
   begins the instant the key was pressed.
 * ",": Enter "tap" mode. Pressing this key repeatedly causes the
-  metronome to match the tempo you tap at. (Not yet implemented.)
+  metronome to match the tempo you tap at; press any other key to
+  leave this mode and begin ticking again.
