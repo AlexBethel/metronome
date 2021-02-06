@@ -84,7 +84,7 @@ impl AppState for SetState {
                 (StateTransition::Exit, TickCommand::Unset)
             }
             Keycode::Key(k) => {
-                if (b'0'..b'9').contains(&k) {
+                if (b'0'..=b'9').contains(&k) {
                     let digit = (k - b'0') as u32;
                     self.tempo *= 10;
                     self.tempo += digit;
