@@ -45,7 +45,7 @@ pub struct SetState {
 }
 
 impl SetState {
-    // Constructs a new TapState given information from the previous
+    // Constructs a new SetState given information from the previous
     // MetronomeState.
     pub fn new(rhythm: BeatSpec, cfg: AudioConfig, volume: f64) -> Self {
         Self {
