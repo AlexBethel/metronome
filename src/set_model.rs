@@ -46,14 +46,23 @@ pub struct SetState {
 
 impl SetState {
     // Constructs a new SetState given information from the previous
-    // MetronomeState.
-    pub fn new(rhythm: BeatSpec, cfg: AudioConfig, volume: f64) -> Self {
+    // MetronomeState. If first_digit is provided, it is used as the
+    // first pre-inputted digit.
+    pub fn new(rhythm: BeatSpec, cfg: AudioConfig, volume: f64, first_digit: Option<u32>) -> Self {
+        let mut view = SetView::new(volume);
+        if let Some(x) = first_digit {
+            view.set_tempo(x);
+        }
+
         Self {
-            tempo: 0,
+            tempo: match first_digit {
+                None => 0,
+                Some(x) => x,
+            },
             rhythm,
             cfg,
             volume,
-            view: SetView::new(volume),
+            view,
         }
     }
 

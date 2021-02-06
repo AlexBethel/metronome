@@ -137,11 +137,12 @@ impl AppState for MetronomeState {
                     ))),
                     TickCommand::Set(Duration::new(0, 0)),
                 ),
-                ControllerMsg::SetMode => (
+                ControllerMsg::SetMode(first_digit) => (
                     StateTransition::To(Box::new(SetState::new(
                         self.rhythm.clone(),
                         self.cfg.clone(),
                         self.volume,
+                        first_digit,
                     ))),
                     TickCommand::Set(Duration::new(0, 0)),
                 ),

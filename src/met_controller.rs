@@ -21,7 +21,7 @@ use std::fmt;
 
 // Messages passed from the controller to the model, indicating user
 // requests.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum ControllerMsg {
     // Pause the metronome if it is running; do nothing if it is
     // already paused.
@@ -48,8 +48,9 @@ pub enum ControllerMsg {
     // Enters tap mode.
     TapMode,
 
-    // Enters set mode (for setting the tempo).
-    SetMode,
+    // Enters set mode (for setting the tempo). Optionally includes a
+    // first digit to input.
+    SetMode(Option<u32>),
 
     // Exits the program.
     Quit,
@@ -87,15 +88,14 @@ impl ControllerState {
             BindingState::Start => None,
             BindingState::Complete(b) => {
                 self.partial = vec![];
-                b.1()
+                Some(b.1)
             }
         }
     }
 }
 
-// A mapping from a key (represented as a set of characters, [u8]) to
-// some functionality.
-struct Binding(&'static [u8], &'static dyn Fn() -> Option<ControllerMsg>);
+// A mapping from a key (vector of input codes) to some functionality.
+struct Binding(Vec<u8>, ControllerMsg);
 
 impl PartialEq for Binding {
     fn eq(&self, other: &Self) -> bool {
@@ -111,70 +111,46 @@ impl fmt::Debug for Binding {
 
 // Sets up the vector of key mapings used by the program.
 fn init_keybindings() -> Vec<Binding> {
-    // TODO: Clean this up with a helper function of some sort.
-    let mut keys = vec![];
-    keys.push(Binding(b"p", &|| Some(ControllerMsg::Pause)));
-    keys.push(Binding(b"P", &|| Some(ControllerMsg::Play)));
-    keys.push(Binding(b" ", &|| Some(ControllerMsg::Toggle)));
-    keys.push(Binding(b".", &|| Some(ControllerMsg::Sync)));
-    keys.push(Binding(b",", &|| Some(ControllerMsg::TapMode)));
-    keys.push(Binding(b"'", &|| Some(ControllerMsg::SetMode)));
-
-    // Arrow keys
-    keys.push(Binding(b"\x1B[A", &|| {
-        // Up
-        Some(ControllerMsg::AdjustVolume(constants::VOL_ADJUST))
-    }));
-    keys.push(Binding(b"\x1B[B", &|| {
-        // Down
-        Some(ControllerMsg::AdjustVolume(-constants::VOL_ADJUST))
-    }));
-    keys.push(Binding(b"\x1B[C", &|| {
-        // Right
-        Some(ControllerMsg::AdjustTempo(constants::TEMPO_ADJUST))
-    }));
-    keys.push(Binding(b"\x1B[D", &|| {
-        // Left
-        Some(ControllerMsg::AdjustTempo(-constants::TEMPO_ADJUST))
-    }));
-
-    // Vim-like directional keys
-    keys.push(Binding(b"k", &|| {
-        Some(ControllerMsg::AdjustVolume(constants::VOL_ADJUST))
-    }));
-    keys.push(Binding(b"j", &|| {
-        Some(ControllerMsg::AdjustVolume(-constants::VOL_ADJUST))
-    }));
-    keys.push(Binding(b"l", &|| {
-        Some(ControllerMsg::AdjustTempo(constants::TEMPO_ADJUST))
-    }));
-    keys.push(Binding(b"h", &|| {
-        Some(ControllerMsg::AdjustTempo(-constants::TEMPO_ADJUST))
-    }));
-
-    // Emacs-like directional keys
-    keys.push(Binding(b"\x10", &|| {
-        // C-p
-        Some(ControllerMsg::AdjustVolume(constants::VOL_ADJUST))
-    }));
-    keys.push(Binding(b"\x0E", &|| {
-        // C-n
-        Some(ControllerMsg::AdjustVolume(-constants::VOL_ADJUST))
-    }));
-    keys.push(Binding(b"\x06", &|| {
-        // C-f
-        Some(ControllerMsg::AdjustTempo(constants::TEMPO_ADJUST))
-    }));
-    keys.push(Binding(b"\x02", &|| {
-        // C-b
-        Some(ControllerMsg::AdjustTempo(-constants::TEMPO_ADJUST))
-    }));
-
-    keys.push(Binding(b"q", &|| Some(ControllerMsg::Quit)));
-    keys.push(Binding(b"\x03", &|| {
+    use ControllerMsg::*;
+    let mut keys = vec![
+        Binding(b"p".to_vec(), Pause),
+        Binding(b"P".to_vec(), Play),
+        Binding(b" ".to_vec(), Toggle),
+        Binding(b".".to_vec(), Sync),
+        Binding(b",".to_vec(), TapMode),
+        Binding(b"'".to_vec(), SetMode(None)),
+        Binding(b"q".to_vec(), Quit),
         // Control-C
-        Some(ControllerMsg::Quit)
-    }));
+        Binding(b"\x03".to_vec(), Quit),
+        // ---- Arrow keys ----
+        // Up
+        Binding(b"\x1B[A".to_vec(), AdjustVolume(constants::VOL_ADJUST)),
+        // Down
+        Binding(b"\x1B[B".to_vec(), AdjustVolume(-constants::VOL_ADJUST)),
+        // Right
+        Binding(b"\x1B[C".to_vec(), AdjustTempo(constants::TEMPO_ADJUST)),
+        // Left
+        Binding(b"\x1B[D".to_vec(), AdjustTempo(-constants::TEMPO_ADJUST)),
+        // ---- Vim-like directional keys ----
+        Binding(b"k".to_vec(), AdjustVolume(constants::VOL_ADJUST)),
+        Binding(b"j".to_vec(), AdjustVolume(-constants::VOL_ADJUST)),
+        Binding(b"l".to_vec(), AdjustTempo(constants::TEMPO_ADJUST)),
+        Binding(b"h".to_vec(), AdjustTempo(-constants::TEMPO_ADJUST)),
+        // ---- Emacs-like directional keys ----
+        // C-p
+        Binding(b"\x10".to_vec(), AdjustVolume(constants::VOL_ADJUST)),
+        // C-n
+        Binding(b"\x0E".to_vec(), AdjustVolume(-constants::VOL_ADJUST)),
+        // C-f
+        Binding(b"\x06".to_vec(), AdjustTempo(constants::TEMPO_ADJUST)),
+        // C-b
+        Binding(b"\x02".to_vec(), AdjustTempo(-constants::TEMPO_ADJUST)),
+    ];
+
+    // Add number keys for directly typing tempo.
+    for c in b'0'..=b'9' {
+        keys.push(Binding(vec![c], SetMode(Some((c - b'0') as u32))));
+    }
 
     keys
 }
