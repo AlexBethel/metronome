@@ -22,6 +22,7 @@ use crate::beat_spec::{BeatSpec, Event};
 use crate::constants;
 use crate::met_controller::{ControllerMsg, ControllerState};
 use crate::met_view::MetronomeView;
+use crate::set_model::SetState;
 use crate::sound::{beep, AudioConfig};
 use crate::tap_model::TapState;
 use std::time::Duration;
@@ -130,6 +131,14 @@ impl AppState for MetronomeState {
                 }
                 ControllerMsg::TapMode => (
                     StateTransition::To(Box::new(TapState::new(
+                        self.rhythm.clone(),
+                        self.cfg.clone(),
+                        self.volume,
+                    ))),
+                    TickCommand::Set(Duration::new(0, 0)),
+                ),
+                ControllerMsg::SetMode => (
+                    StateTransition::To(Box::new(SetState::new(
                         self.rhythm.clone(),
                         self.cfg.clone(),
                         self.volume,

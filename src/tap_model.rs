@@ -116,7 +116,7 @@ impl AppState for TapState {
                 self.times.push(Instant::now());
                 (StateTransition::NoChange, TickCommand::Unset)
             }
-            Keycode::Key(b'\x03') => {
+            Keycode::Key(b'\x03') | Keycode::NoKey => {
                 // Exit on Control-C
                 (StateTransition::Exit, TickCommand::Unset)
             }

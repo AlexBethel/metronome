@@ -87,8 +87,8 @@ key bindings are:
 * Right, "l", "C-b": Increase tempo
 * Left, "h", "C-f": Decrease tempo
 * "q": Quit
-* "g": Prompts for a tempo, and sets the metronome's tempo
-  accordingly. (Not yet implemented.)
+* "'": Prompts for a tempo, and sets the metronome's tempo
+  accordingly.
 * ".": Immediately synchronizes the metronome such that a measure
   begins the instant the key was pressed.
 * ",": Enter "tap" mode. Pressing this key repeatedly causes the

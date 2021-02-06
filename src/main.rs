@@ -26,6 +26,8 @@ pub mod constants;
 pub mod met_controller;
 pub mod met_model;
 pub mod met_view;
+pub mod set_model;
+pub mod set_view;
 pub mod sound;
 pub mod tap_model;
 pub mod tap_view;

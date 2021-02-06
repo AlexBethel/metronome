@@ -48,6 +48,9 @@ pub enum ControllerMsg {
     // Enters tap mode.
     TapMode,
 
+    // Enters set mode (for setting the tempo).
+    SetMode,
+
     // Exits the program.
     Quit,
 }
@@ -115,6 +118,7 @@ fn init_keybindings() -> Vec<Binding> {
     keys.push(Binding(b" ", &|| Some(ControllerMsg::Toggle)));
     keys.push(Binding(b".", &|| Some(ControllerMsg::Sync)));
     keys.push(Binding(b",", &|| Some(ControllerMsg::TapMode)));
+    keys.push(Binding(b"'", &|| Some(ControllerMsg::SetMode)));
 
     // Arrow keys
     keys.push(Binding(b"\x1B[A", &|| {
