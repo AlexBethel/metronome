@@ -33,7 +33,7 @@ pub mod tap_model;
 pub mod tap_view;
 pub mod termios_handler;
 
-use app_state::state_loop;
+use app_state::StateManager;
 use config::Config;
 use met_model::MetronomeState;
 use sound::AudioConfig;
@@ -83,8 +83,8 @@ fn run() -> Result<()> {
         let acfg = AudioConfig::new()?;
         let init_state = MetronomeState::new(&rhythm, acfg, cfg.volume, cfg.tempo);
 
-        let s = state_loop(Box::new(init_state));
-        return s;
+        let s = StateManager::new(Box::new(init_state));
+        return s.state_loop();
     }
 
     Ok(())

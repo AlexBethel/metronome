@@ -19,58 +19,51 @@
 
 use crate::errors::*;
 use std::io::{stdin, Read};
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{channel, Receiver, RecvTimeoutError};
 use std::thread;
 use std::time::{Duration, Instant};
 
 // Possible state of the application at any given time.
 pub trait AppState {
     // Runs one timer tick of the application.
-    fn tick(&mut self) -> (StateTransition, TickCommand);
+    fn tick(&mut self, mgr: &mut StateManager);
 
     // Interprets a key-press, given the amount of time since the last
     // event.
-    fn keypress(&mut self, key: Keycode, time: Duration) -> (StateTransition, TickCommand);
+    fn keypress(&mut self, mgr: &mut StateManager, key: Keycode, time: Duration);
 }
 
-// A transition from one application state to another.
-pub enum StateTransition {
-    // Keep the current program state.
-    NoChange,
+// Data structure for storing and updating the current application
+// state.
+pub struct StateManager {
+    // The state the program should transition to at the next loop.
+    next_state: StateTransition,
 
-    // Quit the program.
+    // Time at which the state next requires an update.
+    tick_time: TickTime,
+}
+
+enum StateTransition {
+    // No change.
+    None,
+
+    // Exit the program.
     Exit,
 
-    // Set the program state to the given value.
+    // Switch to this state.
     To(Box<dyn AppState>),
 }
 
-// A command for the tick manager.
-#[derive(Debug)]
-pub enum TickCommand {
-    // Leaves the tick manager in its current state.
+// Time at which the AppState next requires a tick.
+enum TickTime {
+    // Never tick the AppState.
     None,
 
-    // Signals that a tick should occur for this state in the given
-    // amount of time.
-    Set(Duration),
+    // Tick the AppState at this time.
+    Time(Instant),
 
-    // Sets the tick manager to never run; roughly equivalent to
-    // Set(infinity).
-    Unset,
-
-    // Pauses the tick manager if it was running; does nothing
-    // otherwise.
-    Pause,
-
-    // Resumes the tick manager if it was not running; does nothing
-    // otherwise. Panics if no duration was previously initialized
-    // with Set().
-    Resume,
-
-    // Resumes the tick manager if it was paused and pauses it if it
-    // was resumed.
-    Toggle,
+    // The timer is paused, with this amount left.
+    Paused(Duration),
 }
 
 // Outputs from the keyboard thread.
@@ -82,86 +75,117 @@ pub enum Keycode {
     NoKey,
 }
 
-// Runs the main program loop, given the initial state.
-pub fn state_loop(init_state: Box<dyn AppState>) -> Result<()> {
-    let kbd = init_kbd_thread();
+impl StateManager {
+    // Creates a new StateManager, given the initial state.
+    pub fn new(init_state: Box<dyn AppState>) -> Self {
+        Self {
+            next_state: StateTransition::To(init_state),
 
-    let mut state = init_state;
-    let mut tick_time: Option<Duration> = Some(Duration::new(0, 0));
-    let mut paused = false;
-
-    let mut exit = false;
-    while !exit {
-        let start_time = Instant::now();
-        let key = if !paused {
-            if let Some(tick_time) = tick_time {
-                kbd.recv_timeout(tick_time)
-            } else {
-                Ok(kbd.recv()?)
-            }
-        } else {
-            Ok(kbd.recv()?)
-        };
-
-        let (st, tc) = if let Ok(key) = key {
-            let tmp = state.keypress(key, start_time.elapsed());
-            if let Some(tick_time_unwrapped) = tick_time {
-                if !paused {
-                    tick_time = match tick_time_unwrapped.checked_sub(start_time.elapsed()) {
-                        Some(time) => Some(time),
-                        None => Some(Duration::new(0, 0)),
-                    };
-                }
-            }
-            tmp
-        } else {
-            state.tick()
-        };
-        proc_transition(st, tc, &mut state, &mut tick_time, &mut paused, &mut exit);
+            // Schedule an immediate tick for the new state to
+            // initialize.
+            tick_time: TickTime::Time(Instant::now()),
+        }
     }
 
-    Ok(())
-}
+    // Runs the main program loop.
+    pub fn state_loop(mut self) -> Result<()> {
+        let kbd = init_kbd_thread();
 
-// Processes a set of transition commands on the program state.
-fn proc_transition(
-    st: StateTransition,
-    tc: TickCommand,
-    state: &mut Box<dyn AppState>,
-    tick_time: &mut Option<Duration>,
-    paused: &mut bool,
-    exit: &mut bool,
-) {
-    match st {
-        StateTransition::NoChange => {}
-        StateTransition::Exit => {
-            *exit = true;
-        }
-        StateTransition::To(new_state) => {
-            *state = new_state;
-        }
-    };
+        let mut state_opt = self.next_state;
+        self.next_state = StateTransition::None;
 
-    match tc {
-        TickCommand::None => {}
-        TickCommand::Set(d) => {
-            *tick_time = Some(d);
-            *paused = false;
+        while let StateTransition::To(ref mut state) = state_opt {
+            let start_time = Instant::now();
+            let key = if let TickTime::Time(tick_time) = self.tick_time {
+                let remaining = tick_time.checked_duration_since(start_time);
+                let k = if let Some(t) = remaining {
+                    kbd.recv_timeout(t)
+                } else {
+                    // We're behind schedule; immediately time out.
+                    Err(RecvTimeoutError::Timeout)
+                };
+
+                if matches!(Instant::now().checked_duration_since(tick_time), Some(_)) {
+                    self.tick_time = TickTime::None;
+                }
+
+                k
+            } else {
+                Ok(kbd.recv()?)
+            };
+
+            if let Ok(key) = key {
+                state.keypress(&mut self, key, start_time.elapsed());
+            } else {
+                state.tick(&mut self);
+            };
+
+            if matches!(self.next_state, StateTransition::To(_) | StateTransition::Exit) {
+                state_opt = self.next_state;
+                self.next_state = StateTransition::None;
+            }
         }
-        TickCommand::Unset => {
-            *tick_time = None;
-            *paused = false;
+
+        Ok(())
+    }
+
+    // Schedules the program to exit in the next state loop.
+    pub fn exit(&mut self) {
+        self.next_state = StateTransition::Exit;
+    }
+
+    // Sets the program state.
+    pub fn set_state(&mut self, new_state: Box<dyn AppState>) {
+        self.next_state = StateTransition::To(new_state);
+
+        // Schedule an immediate tick for initialization.
+        self.tick_time = TickTime::Time(Instant::now());
+    }
+
+    // Schedules a tick for the current state in the given duration.
+    pub fn set_tick(&mut self, duration: Duration) {
+        // BUG: This loses precision over long periods of time; make
+        // it dependent on self.tick_time if that doesn't cause
+        // issues.
+        self.tick_time = TickTime::Time(Instant::now() + duration);
+    }
+
+    // Cancels a scheduled tick.
+    pub fn unset_tick(&mut self) {
+        self.tick_time = TickTime::None;
+    }
+
+    // Pauses the tick timer.
+    pub fn pause(&mut self) {
+        if let TickTime::Time(time) = self.tick_time {
+            let remaining = match time.checked_duration_since(Instant::now()) {
+                Some(x) => x,
+                None => Duration::new(0, 0),
+            };
+
+            self.tick_time = TickTime::Paused(remaining);
         }
-        TickCommand::Pause => {
-            *paused = true;
+    }
+
+    // Resumes a paused tick timer.
+    pub fn resume(&mut self) {
+        if let TickTime::Paused(remaining) = self.tick_time {
+            self.tick_time = TickTime::Time(Instant::now() + remaining);
+        } else {
+            panic!("Can't resume an unpaused timer");
         }
-        TickCommand::Resume => {
-            *paused = false;
+    }
+
+    // Toggles the tick timer between running and paused.
+    pub fn toggle_paused(&mut self) {
+        if matches!(self.tick_time, TickTime::Paused(_)) {
+            self.resume();
+        } else if matches!(self.tick_time, TickTime::Time(_)) {
+            self.pause();
+        } else {
+            panic!("Timer does not exist, so it cannot be toggled");
         }
-        TickCommand::Toggle => {
-            *paused = !*paused;
-        }
-    };
+    }
 }
 
 // Sets up a keyboard thread, and returns a receiver for keystrokes;

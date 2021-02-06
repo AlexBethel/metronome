@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::app_state::{AppState, Keycode, StateTransition, TickCommand};
+use crate::app_state::{AppState, Keycode, StateManager};
 use crate::beat_spec::{BeatSpec, Event};
 use crate::constants;
 use crate::met_controller::{ControllerMsg, ControllerState};
@@ -64,7 +64,7 @@ impl MetronomeState {
 }
 
 impl AppState for MetronomeState {
-    fn tick(&mut self) -> (StateTransition, TickCommand) {
+    fn tick(&mut self, mgr: &mut StateManager) {
         let ticks = &self.rhythm.get_ticks();
         let tick = &ticks[self.tick_number];
         play_event(tick, &self.cfg, self.volume);
@@ -77,25 +77,23 @@ impl AppState for MetronomeState {
 
         self.tick_number = (self.tick_number + 1) % ticks.len();
 
-        (
-            StateTransition::NoChange,
-            TickCommand::Set(get_delay(&self.rhythm, self.tempo)),
-        )
+        mgr.set_tick(get_delay(&self.rhythm, self.tempo));
     }
 
-    fn keypress(&mut self, key: Keycode, _time: Duration) -> (StateTransition, TickCommand) {
+    fn keypress(&mut self, mgr: &mut StateManager, key: Keycode, _time: Duration) {
         let cmd = if let Keycode::Key(key) = key {
             self.controller.send(key)
         } else {
             // stdin closed, quit the program.
-            return (StateTransition::Exit, TickCommand::None);
+            mgr.exit();
+            return;
         };
 
         if let Some(cmd) = cmd {
-            return match cmd {
-                ControllerMsg::Pause => (StateTransition::NoChange, TickCommand::Pause),
-                ControllerMsg::Play => (StateTransition::NoChange, TickCommand::Resume),
-                ControllerMsg::Toggle => (StateTransition::NoChange, TickCommand::Toggle),
+            match cmd {
+                ControllerMsg::Pause => mgr.pause(),
+                ControllerMsg::Play => mgr.resume(),
+                ControllerMsg::Toggle => mgr.toggle_paused(),
                 ControllerMsg::AdjustVolume(x) => {
                     self.volume += x;
                     if self.volume < 0.0 {
@@ -106,8 +104,6 @@ impl AppState for MetronomeState {
 
                     self.view.set_volume(self.volume);
                     self.view.draw();
-
-                    (StateTransition::NoChange, TickCommand::None)
                 }
                 ControllerMsg::AdjustTempo(x) => {
                     self.tempo += x;
@@ -119,37 +115,28 @@ impl AppState for MetronomeState {
 
                     self.view.set_tempo(self.tempo);
                     self.view.draw();
-
-                    (StateTransition::NoChange, TickCommand::None)
                 }
                 ControllerMsg::Sync => {
                     self.tick_number = 0;
-                    (
-                        StateTransition::NoChange,
-                        TickCommand::Set(Duration::new(0, 0)),
-                    )
+                    mgr.set_tick(Duration::new(0, 0));
                 }
-                ControllerMsg::TapMode => (
-                    StateTransition::To(Box::new(TapState::new(
+                ControllerMsg::TapMode => {
+                    mgr.set_state(Box::new(TapState::new(
                         self.rhythm.clone(),
                         self.cfg.clone(),
                         self.volume,
-                    ))),
-                    TickCommand::Set(Duration::new(0, 0)),
-                ),
-                ControllerMsg::SetMode(first_digit) => (
-                    StateTransition::To(Box::new(SetState::new(
+                    )));
+                }
+                ControllerMsg::SetMode(first_digit) => {
+                    mgr.set_state(Box::new(SetState::new(
                         self.rhythm.clone(),
                         self.cfg.clone(),
                         self.volume,
                         first_digit,
-                    ))),
-                    TickCommand::Set(Duration::new(0, 0)),
-                ),
-                ControllerMsg::Quit => (StateTransition::Exit, TickCommand::None),
+                    )));
+                }
+                ControllerMsg::Quit => mgr.exit(),
             };
-        } else {
-            (StateTransition::NoChange, TickCommand::None)
         }
     }
 }

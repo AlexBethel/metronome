@@ -17,7 +17,7 @@
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::app_state::Keycode;
-use crate::app_state::{AppState, StateTransition, TickCommand};
+use crate::app_state::{AppState, StateManager};
 use crate::beat_spec::BeatSpec;
 use crate::constants;
 use crate::met_model::MetronomeState;
@@ -86,41 +86,36 @@ impl TapState {
     }
 
     // Leaves Tap mode and returns to Metronome mode.
-    fn exit(&self) -> (StateTransition, TickCommand) {
-        (
-            StateTransition::To(Box::new(MetronomeState::new(
-                &self.rhythm,
-                self.cfg.clone(),
-                self.volume,
-                match self.calc_tempo() {
-                    None => constants::DEF_TEMPO,
-                    Some(x) => x,
-                },
-            ))),
-            TickCommand::Set(Duration::from_secs(0)),
-        )
+    fn exit(&self, mgr: &mut StateManager) {
+        mgr.set_state(Box::new(MetronomeState::new(
+            &self.rhythm,
+            self.cfg.clone(),
+            self.volume,
+            match self.calc_tempo() {
+                None => constants::DEF_TEMPO,
+                Some(x) => x,
+            },
+        )));
     }
 }
 
 impl AppState for TapState {
-    fn tick(&mut self) -> (StateTransition, TickCommand) {
+    fn tick(&mut self, _mgr: &mut StateManager) {
         self.view.draw();
-        (StateTransition::NoChange, TickCommand::Unset)
     }
 
-    fn keypress(&mut self, key: Keycode, _time: Duration) -> (StateTransition, TickCommand) {
+    fn keypress(&mut self, mgr: &mut StateManager, key: Keycode, _time: Duration) {
         // Tap controller is simple enough that it doesn't get its own
         // file. (It's self-contained in this function here.)
         match key {
             Keycode::Key(b',') => {
                 self.times.push(Instant::now());
-                (StateTransition::NoChange, TickCommand::Unset)
             }
             Keycode::Key(b'\x03') | Keycode::NoKey => {
                 // Exit on Control-C
-                (StateTransition::Exit, TickCommand::Unset)
+                mgr.exit();
             }
-            _ => self.exit(),
+            _ => self.exit(mgr),
         }
     }
 }

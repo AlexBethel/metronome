@@ -17,7 +17,7 @@
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::app_state::Keycode;
-use crate::app_state::{AppState, StateTransition, TickCommand};
+use crate::app_state::{AppState, StateManager};
 use crate::beat_spec::BeatSpec;
 use crate::constants;
 use crate::met_model::MetronomeState;
@@ -67,30 +67,26 @@ impl SetState {
     }
 
     // Leaves Set mode and returns to Metronome mode.
-    fn exit(&self) -> (StateTransition, TickCommand) {
-        (
-            StateTransition::To(Box::new(MetronomeState::new(
-                &self.rhythm,
-                self.cfg.clone(),
-                self.volume,
-                self.tempo as f64,
-            ))),
-            TickCommand::Set(Duration::from_secs(0)),
-        )
+    fn exit(&self, mgr: &mut StateManager) {
+        mgr.set_state(Box::new(MetronomeState::new(
+            &self.rhythm,
+            self.cfg.clone(),
+            self.volume,
+            self.tempo as f64,
+        )));
     }
 }
 
 impl AppState for SetState {
-    fn tick(&mut self) -> (StateTransition, TickCommand) {
+    fn tick(&mut self, _mgr: &mut StateManager) {
         self.view.draw();
-        (StateTransition::NoChange, TickCommand::Unset)
     }
 
-    fn keypress(&mut self, key: Keycode, _time: Duration) -> (StateTransition, TickCommand) {
+    fn keypress(&mut self, mgr: &mut StateManager, key: Keycode, _time: Duration) {
         match key {
             Keycode::Key(b'\x03') | Keycode::NoKey => {
                 // Exit on Control-C or EOF
-                (StateTransition::Exit, TickCommand::Unset)
+                mgr.exit();
             }
             Keycode::Key(k) => {
                 if (b'0'..=b'9').contains(&k) {
@@ -102,14 +98,13 @@ impl AppState for SetState {
                         // Any more keys typed by the user would
                         // result in an invalid tempo; go ahead and
                         // submit for them.
-                        self.exit()
+                        self.exit(mgr)
                     } else {
                         self.view.set_tempo(self.tempo);
                         self.view.draw();
-                        (StateTransition::NoChange, TickCommand::Unset)
                     }
                 } else {
-                    self.exit()
+                    self.exit(mgr)
                 }
             }
         }
