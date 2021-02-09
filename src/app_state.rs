@@ -56,8 +56,9 @@ enum StateTransition {
 
 // Time at which the AppState next requires a tick.
 enum TickTime {
-    // Never tick the AppState.
-    None,
+    // The AppState was last ticked at this time, and no further ticks
+    // are scheduled.
+    Stopped(Instant),
 
     // Tick the AppState at this time.
     Time(Instant),
@@ -106,7 +107,7 @@ impl StateManager {
                 };
 
                 if matches!(Instant::now().checked_duration_since(tick_time), Some(_)) {
-                    self.tick_time = TickTime::None;
+                    self.tick_time = TickTime::Stopped(tick_time);
                 }
 
                 k
@@ -144,15 +145,27 @@ impl StateManager {
 
     // Schedules a tick for the current state in the given duration.
     pub fn set_tick(&mut self, duration: Duration) {
-        // BUG: This loses precision over long periods of time; make
-        // it dependent on self.tick_time if that doesn't cause
-        // issues.
-        self.tick_time = TickTime::Time(Instant::now() + duration);
+        // Base the new tick time off of the time of the previous tick
+        // time, if available, rather than the current time. This has
+        // the effect that the clock doesn't lose precision over long
+        // periods of time: if you call set_tick(Duration::
+        // from_secs(2)) a million times, you can bet that will finish
+        // after exactly 2 million seconds, in contrast to what would
+        // be obtained by calling thread::sleep(Duration::
+        // from_secs(2)) a million times, where you would get a few
+        // extra seconds from built-up processor speed overhead.
+        self.tick_time = match self.tick_time {
+            TickTime::Stopped(t) => TickTime::Time(t + duration),
+            _ => TickTime::Time(Instant::now() + duration),
+        };
     }
 
     // Cancels a scheduled tick.
     pub fn unset_tick(&mut self) {
-        self.tick_time = TickTime::None;
+        self.tick_time = TickTime::Stopped(match self.tick_time {
+            TickTime::Time(i) => i,
+            _ => Instant::now(),
+        });
     }
 
     // Pauses the tick timer.
