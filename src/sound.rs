@@ -20,7 +20,6 @@ use crate::errors::*;
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::{Device, StreamConfig};
 use std::ops::Deref;
-use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
@@ -32,22 +31,22 @@ pub struct AudioConfig {
     // Note that this struct implements Deref, so you can write
     // "audio_config.device" rather than needing to spell out the
     // literal path "(*audio_config.cfg).device".
-    cfg: Arc<AudioConfigInternal>,
+    cfg: &'static AudioConfigInternal,
 }
 
 impl AudioConfig {
     pub fn new() -> Result<Self> {
         Ok(AudioConfig {
-            cfg: Arc::new(AudioConfigInternal::new()?),
+            cfg: Box::leak(Box::new(AudioConfigInternal::new()?)),
         })
     }
 }
 
 impl Deref for AudioConfig {
-    type Target = Arc<AudioConfigInternal>;
+    type Target = AudioConfigInternal;
 
-    fn deref(&self) -> &Arc<AudioConfigInternal> {
-        &self.cfg
+    fn deref(&self) -> &AudioConfigInternal {
+        self.cfg
     }
 }
 
