@@ -16,9 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Metronome. If not, see <https://www.gnu.org/licenses/>.
 
-extern crate colorful;
-extern crate getopts;
-extern crate termios;
 pub mod app_state;
 pub mod beat_spec;
 pub mod config;
